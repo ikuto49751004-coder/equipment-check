@@ -60,7 +60,7 @@
                 <div class="pt-1 border-t border-slate-100 flex justify-between items-center">
                     <span class="text-[11px] text-slate-400">※対象や項目の編集は右上の歯車ボタンから行えます</span>
                     <button onclick="resetCheckResults()" class="text-[11px] bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 px-2.5 py-1 rounded-md font-bold flex items-center gap-1 transition">
-                        <i class="fa-solid fa-rotate-left"></i> 今月のチェック解散・リセット
+                        <i class="fa-solid fa-rotate-left"></i> 今月のチェックリセット
                     </button>
                 </div>
             </div>
@@ -207,7 +207,7 @@
 
                     <div>
                         <h5 class="font-bold text-slate-700 mb-1">登録済み設備一覧</h5>
-                        <div id="master-list-display" class="space-y-1.5 divide-y divide-slate-100 bg-slate-50 p-2 rounded-lg border border-slate-200"></div>
+                        <div id="master-list-display" class="space-y-2 bg-slate-50 p-2 rounded-lg border border-slate-200"></div>
                     </div>
                 </div>
             </div>
@@ -270,6 +270,7 @@
         let currentPage = 1;
         let activeNgKey = null;
         let tempPhotoData = '';
+        let editingEqKey = null;
 
         const termMonths = {
             '上期': ['4月', '5月', '6月', '7月', '8月', '9月'],
@@ -914,18 +915,85 @@
             Object.keys(masterData.pages).forEach(p => {
                 const eqs = masterData.pages[p].equipment;
                 eqs.forEach(eq => {
+                    const eqKey = `${p}_${eq.id}`;
+                    const isEditing = (editingEqKey === eqKey);
                     const div = document.createElement('div');
-                    div.className = 'pt-1.5 flex justify-between items-start';
-                    div.innerHTML = `
-                        <div>
-                            <span class="font-bold text-slate-800">[${p}P] ${eq.name}</span>
-                            <div class="text-[10px] text-slate-500">${eq.items.length} 項目</div>
-                        </div>
-                        <button onclick="removeEquipment(${p}, '${eq.id}')" class="text-rose-500 hover:text-rose-700 text-xs p-1">削除</button>
-                    `;
+                    div.className = 'p-2 bg-white rounded-lg border border-slate-200 text-xs space-y-2';
+
+                    if (!isEditing) {
+                        div.innerHTML = `
+                            <div class="flex justify-between items-start">
+                                <div>
+                                    <span class="font-bold text-slate-800">[${p}P] ${eq.name}</span>
+                                    <span class="text-[10px] text-slate-500 block">${eq.items.length} 項目</span>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button onclick="startEditingEquipment('${eqKey}')" class="text-indigo-600 hover:text-indigo-800 font-bold text-xs"><i class="fa-solid fa-pen-to-square"></i> 編集</button>
+                                    <button onclick="removeEquipment(${p}, '${eq.id}')" class="text-rose-500 hover:text-rose-700 text-xs">削除</button>
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        const itemsTxt = eq.items.map(i => i.text).join('\n');
+                        div.innerHTML = `
+                            <div class="space-y-2 bg-indigo-50/50 p-2 rounded-md border border-indigo-100">
+                                <div class="font-bold text-indigo-900 text-[11px]">[${p}P] 設備の編集</div>
+                                <div>
+                                    <label class="block text-[10px] text-slate-500 font-bold mb-0.5">設備名</label>
+                                    <input type="text" id="edit-eq-name-${eqKey}" value="${eq.name}" class="w-full p-1 border border-slate-300 rounded bg-white font-bold text-xs">
+                                </div>
+                                <div>
+                                    <label class="block text-[10px] text-slate-500 font-bold mb-0.5">点検項目 (1行に1つ)</label>
+                                    <textarea id="edit-eq-items-${eqKey}" rows="4" class="w-full p-1 border border-slate-300 rounded bg-white text-xs">${itemsTxt}</textarea>
+                                </div>
+                                <div class="flex gap-1.5 pt-1">
+                                    <button onclick="cancelEditingEquipment()" class="flex-1 py-1 bg-slate-200 text-slate-700 font-bold rounded text-[11px]">キャンセル</button>
+                                    <button onclick="saveEditingEquipment(${p}, '${eq.id}', '${eqKey}')" class="flex-1 py-1 bg-indigo-900 text-white font-bold rounded text-[11px] shadow">保存</button>
+                                </div>
+                            </div>
+                        `;
+                    }
                     container.appendChild(div);
                 });
             });
+        }
+
+        function startEditingEquipment(eqKey) {
+            editingEqKey = eqKey;
+            renderMasterList();
+        }
+
+        function cancelEditingEquipment() {
+            editingEqKey = null;
+            renderMasterList();
+        }
+
+        function saveEditingEquipment(page, eqId, eqKey) {
+            const newName = document.getElementById(`edit-eq-name-${eqKey}`).value.trim();
+            const itemsText = document.getElementById(`edit-eq-items-${eqKey}`).value.trim();
+
+            if (!newName) {
+                alert('設備名を入力してください');
+                return;
+            }
+
+            const eq = masterData.pages[page].equipment.find(e => e.id === eqId);
+            if (eq) {
+                eq.name = newName;
+                const lines = itemsText.split('\n').filter(t => t.trim());
+                eq.items = lines.map((t, idx) => ({
+                    id: eq.items[idx] ? eq.items[idx].id : `i_edit_${Date.now()}_${idx}`,
+                    text: t.trim()
+                }));
+            }
+
+            editingEqKey = null;
+            autoSaveStorage();
+            renderMasterList();
+            renderPageButtons();
+            renderCurrentPage();
+            updateProgress();
+            alert('設備の編集内容を保存しました！');
         }
 
         function removeEquipment(page, eqId) {
