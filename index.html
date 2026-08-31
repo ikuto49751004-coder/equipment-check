@@ -6,6 +6,11 @@
     <title>設備・工具自主検査アプリ</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Firebase SDK (v9/v10 Compat Library) -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
+
     <style>
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
@@ -110,7 +115,7 @@
             <span class="text-slate-500">点検完了: </span>
             <span id="completed-counter" class="font-bold text-indigo-900">0 / 0</span>
             <span id="save-status-text" class="block text-[10px] text-emerald-600 font-bold mt-0.5">
-                <i class="fa-solid fa-circle-check"></i> 自動保存済み
+                <i class="fa-solid fa-circle-check"></i> クラウド同期中...
             </span>
         </div>
         <button onclick="manualSaveData()" class="bg-indigo-900 hover:bg-indigo-800 text-white text-xs font-bold px-5 py-2.5 rounded-lg shadow flex items-center gap-1.5">
@@ -264,6 +269,20 @@
     </div>
 
     <script>
+        // --- Firebase 設定 ---
+        const firebaseConfig = {
+            apiKey: "YOUR_API_KEY",
+            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+            databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
+            projectId: "YOUR_PROJECT_ID",
+            storageBucket: "YOUR_PROJECT_ID.appspot.com",
+            messagingSenderId: "YOUR_SENDER_ID",
+            appId: "YOUR_APP_ID"
+        };
+
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
         let currentYear = '2026年度';
         let currentTerm = '上期';
         let currentMonth = '4月';
@@ -487,7 +506,7 @@
                     ]},
                     { id: 'eq_6_5', name: 'VAC組立エリア 電動ドライバー（VA-01, VA-02）', items: [
                         { id: 'i_6_5_1', text: '① 動作に問題は無いか' },
-                        { id: 'i_6_5_2', text: '② トルク値は適正か' }
+                        { id: 'i_6_6_2', text: '② トルク値は適正か' }
                     ]},
                     { id: 'eq_6_6', name: 'ASE組立エリア 電動ドライバー（AS-01, AS-02）', items: [
                         { id: 'i_6_6_1', text: '① 動作に問題は無いか' },
@@ -502,8 +521,8 @@
         let inspectionResults = {};
 
         document.addEventListener('DOMContentLoaded', () => {
-            loadStorageData();
             generateYearOptions();
+            setupFirebaseListeners();
             updateHeaderDisplay();
             renderMonthButtons();
             renderPageButtons();
@@ -512,19 +531,55 @@
             updateProgress();
         });
 
-        function loadStorageData() {
-            const savedMaster = localStorage.getItem('inspection_master_v3');
-            const savedResults = localStorage.getItem('inspection_results_v3');
-            const savedConfig = localStorage.getItem('inspection_config_v3');
+        // --- Firebase リアルタイム同期設定 ---
+        function setupFirebaseListeners() {
+            // 1. マスターデータの同期
+            database.ref('masterData').on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (data && data.pages) {
+                    // Firebaseの配列変換対策（空の配列補正）
+                    for (let p in data.pages) {
+                        if (!data.pages[p].equipment) {
+                            data.pages[p].equipment = [];
+                        } else {
+                            data.pages[p].equipment.forEach(eq => {
+                                if (!eq.items) eq.items = [];
+                            });
+                        }
+                    }
+                    masterData = data;
+                } else {
+                    // 初期データ登録
+                    database.ref('masterData').set(defaultMasterData);
+                }
+                refreshUI();
+            });
 
-            if (savedMaster) masterData = JSON.parse(savedMaster);
-            if (savedResults) inspectionResults = JSON.parse(savedResults);
-            if (savedConfig) {
-                const conf = JSON.parse(savedConfig);
-                currentYear = conf.year || '2026年度';
-                currentTerm = conf.term || '上期';
-                currentMonth = conf.month || (currentTerm === '上期' ? '4月' : '10月');
-            }
+            // 2. 点検結果データの同期
+            database.ref('inspectionResults').on('value', (snapshot) => {
+                inspectionResults = snapshot.val() || {};
+                refreshUI();
+            });
+
+            // 3. システム設定（年度・期・月）の同期
+            database.ref('config').on('value', (snapshot) => {
+                const conf = snapshot.val();
+                if (conf) {
+                    currentYear = conf.year || '2026年度';
+                    currentTerm = conf.term || '上期';
+                    currentMonth = conf.month || '4月';
+                    updateHeaderDisplay();
+                    renderMonthButtons();
+                    refreshUI();
+                }
+            });
+        }
+
+        function refreshUI() {
+            renderPageButtons();
+            renderCurrentPage();
+            renderMasterList();
+            updateProgress();
         }
 
         function generateYearOptions() {
@@ -542,17 +597,18 @@
         }
 
         function autoSaveStorage() {
-            localStorage.setItem('inspection_master_v3', JSON.stringify(masterData));
-            localStorage.setItem('inspection_results_v3', JSON.stringify(inspectionResults));
-            localStorage.setItem('inspection_config_v3', JSON.stringify({
+            // Firebaseへ保存（即時同期）
+            database.ref('masterData').set(masterData);
+            database.ref('inspectionResults').set(inspectionResults);
+            database.ref('config').set({
                 year: currentYear,
                 term: currentTerm,
                 month: currentMonth
-            }));
+            });
 
             const statusTxt = document.getElementById('save-status-text');
             if (statusTxt) {
-                statusTxt.innerHTML = `<i class="fa-solid fa-circle-check"></i> 自動保存済み (${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})})`;
+                statusTxt.innerHTML = `<i class="fa-solid fa-circle-check"></i> クラウド同期済み (${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})})`;
             }
         }
 
@@ -570,9 +626,6 @@
                     }
                 });
                 autoSaveStorage();
-                renderPageButtons();
-                renderCurrentPage();
-                updateProgress();
                 alert(`${currentMonth}のチェック結果をリセットしました。`);
             }
         }
@@ -583,7 +636,7 @@
 
         function renderMonthButtons() {
             const container = document.getElementById('month-buttons-container');
-            const months = termMonths[currentTerm];
+            const months = termMonths[currentTerm] || termMonths['上期'];
 
             if (!months.includes(currentMonth)) {
                 currentMonth = months[0];
@@ -633,64 +686,72 @@
 
         function getPageStatus(p) {
             let total = 0, completed = 0;
-            const eqs = (masterData.pages[p] && masterData.pages[p].equipment) || [];
+            const eqs = (masterData.pages && masterData.pages[p] && masterData.pages[p].equipment) || [];
             eqs.forEach(eq => {
-                eq.items.forEach(i => {
-                    total++;
-                    const key = `${currentYear}_${currentMonth}_${i.id}`;
-                    if (inspectionResults[key] && inspectionResults[key].status) completed++;
-                });
+                if (eq.items) {
+                    eq.items.forEach(i => {
+                        total++;
+                        const key = `${currentYear}_${currentMonth}_${i.id}`;
+                        if (inspectionResults[key] && inspectionResults[key].status) completed++;
+                    });
+                }
             });
             return { total, completed };
         }
 
         function getUninspectedCount() {
             let total = 0, completed = 0;
-            Object.keys(masterData.pages).forEach(p => {
-                masterData.pages[p].equipment.forEach(eq => {
-                    eq.items.forEach(i => {
-                        total++;
-                        const key = `${currentYear}_${currentMonth}_${i.id}`;
-                        if (inspectionResults[key] && inspectionResults[key].status) completed++;
+            if (masterData.pages) {
+                Object.keys(masterData.pages).forEach(p => {
+                    const eqs = masterData.pages[p].equipment || [];
+                    eqs.forEach(eq => {
+                        if (eq.items) {
+                            eq.items.forEach(i => {
+                                total++;
+                                const key = `${currentYear}_${currentMonth}_${i.id}`;
+                                if (inspectionResults[key] && inspectionResults[key].status) completed++;
+                            });
+                        }
                     });
                 });
-            });
+            }
             return { total, completed, uninspected: total - completed };
         }
 
         function selectMonth(m) {
-            autoSaveStorage();
             currentMonth = m;
+            autoSaveStorage();
             renderMonthButtons();
-            renderPageButtons();
-            renderCurrentPage();
-            updateProgress();
+            refreshUI();
         }
 
         function selectPage(p) {
-            autoSaveStorage();
             currentPage = p;
             renderPageButtons();
             renderCurrentPage();
         }
 
         function renderCurrentPage() {
-            const pData = masterData.pages[currentPage] || { staff: '未定', equipment: [] };
-            document.getElementById('page-staff-display').innerText = `担当: ${pData.staff}`;
+            const pData = (masterData.pages && masterData.pages[currentPage]) || { staff: '未定', equipment: [] };
+            document.getElementById('page-staff-display').innerText = `担当: ${pData.staff || '未定'}`;
 
             const container = document.getElementById('equipment-cards-container');
             container.innerHTML = '';
 
-            if (pData.equipment.length === 0) {
+            const equipmentList = pData.equipment || [];
+
+            if (equipmentList.length === 0) {
                 container.innerHTML = `<div class="p-8 text-center text-xs text-slate-400 bg-white rounded-xl border border-dashed">このページには点検対象が設定されていません。<br>右上の歯車ボタンから追加・編集できます。</div>`;
                 return;
             }
 
-            pData.equipment.forEach(eq => {
+            equipmentList.forEach(eq => {
                 const card = document.createElement('div');
                 card.className = 'bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden';
 
-                let itemsHtml = eq.items.map(item => {
+                const itemsList = eq.items || [];
+
+                let itemsHtml = itemsList.map(item => {
                     const key = `${currentYear}_${currentMonth}_${item.id}`;
                     const res = inspectionResults[key] || { status: '', reason: '', photo: '' };
 
@@ -718,7 +779,7 @@
                 card.innerHTML = `
                     <div class="bg-indigo-50/50 p-2.5 border-b border-slate-200 flex justify-between items-center">
                         <span class="font-bold text-xs text-indigo-950">${eq.name}</span>
-                        <span class="text-[10px] text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded-full font-semibold">${eq.items.length} 項目</span>
+                        <span class="text-[10px] text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded-full font-semibold">${itemsList.length} 項目</span>
                     </div>
                     <div>${itemsHtml}</div>
                 `;
@@ -729,9 +790,6 @@
         function setResult(key, status) {
             inspectionResults[key] = { status: status, reason: '', photo: '' };
             autoSaveStorage();
-            renderPageButtons();
-            renderCurrentPage();
-            updateProgress();
         }
 
         function openNgModal(key) {
@@ -788,9 +846,6 @@
             inspectionResults[activeNgKey] = { status: 'NG', reason: reason, photo: tempPhotoData };
             autoSaveStorage();
             closeNgModal();
-            renderPageButtons();
-            renderCurrentPage();
-            updateProgress();
         }
 
         function openSettingsModal() {
@@ -834,16 +889,10 @@
             currentMonth = document.getElementById('setting-month').value;
 
             closeSettingsModal();
-            updateHeaderDisplay();
-            renderMonthButtons();
-            renderPageButtons();
-            renderCurrentPage();
-            updateProgress();
             autoSaveStorage();
         }
 
         function switchMainTab(tab) {
-            autoSaveStorage();
             document.getElementById('view-check').classList.add('hidden');
             document.getElementById('view-report').classList.add('hidden');
 
@@ -872,14 +921,14 @@
 
         function loadPageStaffConfig() {
             const p = document.getElementById('edit-page-select').value;
-            document.getElementById('staff-input').value = masterData.pages[p].staff || '';
+            document.getElementById('staff-input').value = (masterData.pages && masterData.pages[p] && masterData.pages[p].staff) || '';
         }
 
         function saveStaffConfig() {
             const p = document.getElementById('edit-page-select').value;
+            if (!masterData.pages[p]) masterData.pages[p] = { staff: '', equipment: [] };
             masterData.pages[p].staff = document.getElementById('staff-input').value.trim();
             autoSaveStorage();
-            renderCurrentPage();
             alert(`${p}ページの担当者を保存しました！`);
         }
 
@@ -894,6 +943,9 @@
                 text: t.trim()
             }));
 
+            if (!masterData.pages[targetP]) masterData.pages[targetP] = { staff: '未定', equipment: [] };
+            if (!masterData.pages[targetP].equipment) masterData.pages[targetP].equipment = [];
+
             masterData.pages[targetP].equipment.push({
                 id: `eq_user_${Date.now()}`,
                 name: name,
@@ -903,29 +955,30 @@
             document.getElementById('new-eq-name').value = '';
             document.getElementById('new-eq-items').value = '';
             autoSaveStorage();
-            renderMasterList();
-            renderPageButtons();
-            renderCurrentPage();
             alert(`${targetP}ページに新しい設備を追加・保存しました！`);
         }
 
         function renderMasterList() {
             const container = document.getElementById('master-list-display');
             container.innerHTML = '';
+            if (!masterData.pages) return;
+
             Object.keys(masterData.pages).forEach(p => {
-                const eqs = masterData.pages[p].equipment;
+                const eqs = masterData.pages[p].equipment || [];
                 eqs.forEach(eq => {
                     const eqKey = `${p}_${eq.id}`;
                     const isEditing = (editingEqKey === eqKey);
                     const div = document.createElement('div');
                     div.className = 'p-2 bg-white rounded-lg border border-slate-200 text-xs space-y-2';
 
+                    const itemsCount = eq.items ? eq.items.length : 0;
+
                     if (!isEditing) {
                         div.innerHTML = `
                             <div class="flex justify-between items-start">
                                 <div>
                                     <span class="font-bold text-slate-800">[${p}P] ${eq.name}</span>
-                                    <span class="text-[10px] text-slate-500 block">${eq.items.length} 項目</span>
+                                    <span class="text-[10px] text-slate-500 block">${itemsCount} 項目</span>
                                 </div>
                                 <div class="flex gap-2">
                                     <button onclick="startEditingEquipment('${eqKey}')" class="text-indigo-600 hover:text-indigo-800 font-bold text-xs"><i class="fa-solid fa-pen-to-square"></i> 編集</button>
@@ -934,7 +987,7 @@
                             </div>
                         `;
                     } else {
-                        const itemsTxt = eq.items.map(i => i.text).join('\n');
+                        const itemsTxt = eq.items ? eq.items.map(i => i.text).join('\n') : '';
                         div.innerHTML = `
                             <div class="space-y-2 bg-indigo-50/50 p-2 rounded-md border border-indigo-100">
                                 <div class="font-bold text-indigo-900 text-[11px]">[${p}P] 設備の編集</div>
@@ -982,17 +1035,13 @@
                 eq.name = newName;
                 const lines = itemsText.split('\n').filter(t => t.trim());
                 eq.items = lines.map((t, idx) => ({
-                    id: eq.items[idx] ? eq.items[idx].id : `i_edit_${Date.now()}_${idx}`,
+                    id: (eq.items && eq.items[idx]) ? eq.items[idx].id : `i_edit_${Date.now()}_${idx}`,
                     text: t.trim()
                 }));
             }
 
             editingEqKey = null;
             autoSaveStorage();
-            renderMasterList();
-            renderPageButtons();
-            renderCurrentPage();
-            updateProgress();
             alert('設備の編集内容を保存しました！');
         }
 
@@ -1000,9 +1049,6 @@
             if (confirm('この設備と点検項目を削除しますか？')) {
                 masterData.pages[page].equipment = masterData.pages[page].equipment.filter(e => e.id !== eqId);
                 autoSaveStorage();
-                renderMasterList();
-                renderPageButtons();
-                renderCurrentPage();
             }
         }
 
@@ -1010,18 +1056,23 @@
             const email = document.getElementById('manager-email').value || '';
             let ngSummary = [];
 
-            Object.keys(masterData.pages).forEach(p => {
-                masterData.pages[p].equipment.forEach(eq => {
-                    eq.items.forEach(i => {
-                        const key = `${currentYear}_${currentMonth}_${i.id}`;
-                        const res = inspectionResults[key];
-                        if (res && res.status === 'NG') {
-                            const hasPhoto = res.photo ? ' (写真添付あり)' : '';
-                            ngSummary.push(`・[${p}P] ${eq.name} - ${i.text}\n  理由: ${res.reason || '記述なし'}${hasPhoto}`);
+            if (masterData.pages) {
+                Object.keys(masterData.pages).forEach(p => {
+                    const eqs = masterData.pages[p].equipment || [];
+                    eqs.forEach(eq => {
+                        if (eq.items) {
+                            eq.items.forEach(i => {
+                                const key = `${currentYear}_${currentMonth}_${i.id}`;
+                                const res = inspectionResults[key];
+                                if (res && res.status === 'NG') {
+                                    const hasPhoto = res.photo ? ' (写真添付あり)' : '';
+                                    ngSummary.push(`・[${p}P] ${eq.name} - ${i.text}\n  理由: ${res.reason || '記述なし'}${hasPhoto}`);
+                                }
+                            });
                         }
                     });
                 });
-            });
+            }
 
             const subject = encodeURIComponent(`【設備工具点検結果報告】${currentYear} ${currentTerm} (${currentMonth})`);
             let bodyText = `部長\n\nお疲れ様です。\n${currentYear} ${currentTerm}（${currentMonth}）の設備・工具点検結果をご報告いたします。\n\n`;
@@ -1043,18 +1094,23 @@
             let csv = "年度,期区分,点検月,ページ,設備名,点検項目,結果,NG理由・メモ,写真添付\n";
             const allMonths = [...termMonths['上期'], ...termMonths['下期']];
 
-            Object.keys(masterData.pages).forEach(p => {
-                masterData.pages[p].equipment.forEach(eq => {
-                    eq.items.forEach(i => {
-                        allMonths.forEach(m => {
-                            const key = `${currentYear}_${m}_${i.id}`;
-                            const res = inspectionResults[key] || { status: '未点検', reason: '', photo: '' };
-                            const photoFlag = res.photo ? 'あり' : 'なし';
-                            csv += `"${currentYear}","${currentTerm}","${m}","${p}P","${eq.name}","${i.text}","${res.status}","${res.reason}","${photoFlag}"\n`;
-                        });
+            if (masterData.pages) {
+                Object.keys(masterData.pages).forEach(p => {
+                    const eqs = masterData.pages[p].equipment || [];
+                    eqs.forEach(eq => {
+                        if (eq.items) {
+                            eq.items.forEach(i => {
+                                allMonths.forEach(m => {
+                                    const key = `${currentYear}_${m}_${i.id}`;
+                                    const res = inspectionResults[key] || { status: '未点検', reason: '', photo: '' };
+                                    const photoFlag = res.photo ? 'あり' : 'なし';
+                                    csv += `"${currentYear}","${currentTerm}","${m}","${p}P","${eq.name}","${i.text}","${res.status}","${res.reason}","${photoFlag}"\n`;
+                                });
+                            });
+                        }
                     });
                 });
-            });
+            }
 
             const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csv], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement("a");
