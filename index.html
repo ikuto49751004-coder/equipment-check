@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>設備・工具自主検査アプリ</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased min-h-screen flex flex-col max-w-lg mx-auto border-x border-slate-200 relative pb-24">
+
+    <header class="bg-indigo-900 text-white p-4 sticky top-0 z-30 shadow-md">
+        <div class="flex justify-between items-center mb-2">
+            <h1 class="text-base font-bold flex items-center gap-2">
+                <i class="fa-solid fa-clipboard-check text-emerald-400"></i>
+                設備・工具点検システム
+            </h1>
+            <span class="text-xs bg-indigo-800 text-indigo-200 px-2.5 py-1 rounded-full border border-indigo-700 font-medium">2026年度 上期</span>
+        </div>
+        
+        <div class="flex gap-1.5 overflow-x-auto no-scrollbar pt-1 text-xs font-semibold">
+            <button onclick="selectMonth('4月')" class="month-btn px-3 py-1 rounded-full bg-emerald-500 text-white shadow shrink-0">4月</button>
+            <button onclick="selectMonth('5月')" class="month-btn px-3 py-1 rounded-full bg-indigo-950/60 text-indigo-200 hover:bg-indigo-800 shrink-0">5月</button>
+            <button onclick="selectMonth('6月')" class="month-btn px-3 py-1 rounded-full bg-indigo-950/60 text-indigo-200 hover:bg-indigo-800 shrink-0">6月</button>
+            <button onclick="selectMonth('7月')" class="month-btn px-3 py-1 rounded-full bg-indigo-950/60 text-indigo-200 hover:bg-indigo-800 shrink-0">7月</button>
+            <button onclick="selectMonth('8月')" class="month-btn px-3 py-1 rounded-full bg-indigo-950/60 text-indigo-200 hover:bg-indigo-800 shrink-0">8月</button>
+            <button onclick="selectMonth('9月')" class="month-btn px-3 py-1 rounded-full bg-indigo-950/60 text-indigo-200 hover:bg-indigo-800 shrink-0">9月</button>
+        </div>
+    </header>
+
+    <nav class="bg-white border-b border-slate-200 p-2 flex text-xs font-bold gap-1 sticky top-[90px] z-20 shadow-sm">
+        <button onclick="switchMainTab('check')" id="tab-check" class="flex-1 py-2 rounded-lg bg-indigo-900 text-white text-center shadow">
+            <i class="fa-solid fa-pen-to-square mr-1"></i>点検入力
+        </button>
+        <button onclick="switchMainTab('master')" id="tab-master" class="flex-1 py-2 rounded-lg text-slate-600 text-center hover:bg-slate-100">
+            <i class="fa-solid fa-sliders mr-1"></i>対象・項目編集
+        </button>
+        <button onclick="switchMainTab('report')" id="tab-report" class="flex-1 py-2 rounded-lg text-slate-600 text-center hover:bg-slate-100">
+            <i class="fa-solid fa-paper-plane mr-1"></i>結果・送信
+        </button>
+    </nav>
+
+    <main class="p-3 flex-1 space-y-4">
+
+        <div id="view-check" class="space-y-3">
+            
+            <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
+                <div class="text-[11px] font-bold text-slate-500 mb-1.5 flex justify-between items-center">
+                    <span><i class="fa-regular fa-file-lines mr-1"></i>シートページ選択 (全7ページ)</span>
+                    <span id="page-staff-display" class="text-indigo-600">担当: 設定なし</span>
+                </div>
+                <div class="grid grid-cols-7 gap-1 text-xs font-bold text-center">
+                    <button onclick="selectPage(1)" class="page-btn py-1.5 rounded-lg bg-indigo-900 text-white shadow">1P</button>
+                    <button onclick="selectPage(2)" class="page-btn py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200">2P</button>
+                    <button onclick="selectPage(3)" class="page-btn py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200">3P</button>
+                    <button onclick="selectPage(4)" class="page-btn py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200">4P</button>
+                    <button onclick="selectPage(5)" class="page-btn py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200">5P</button>
+                    <button onclick="selectPage(6)" class="page-btn py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200">6P</button>
+                    <button onclick="selectPage(7)" class="page-btn py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200">7P</button>
+                </div>
+            </div>
+
+            <div id="equipment-cards-container" class="space-y-3">
+                </div>
+        </div>
+
+        <div id="view-master" class="hidden space-y-4">
+            
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                <h3 class="font-bold text-sm text-indigo-900 flex items-center gap-2">
+                    <i class="fa-solid fa-user-gear"></i> ページ担当者設定
+                </h3>
+                <div class="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                        <label class="block text-slate-500 mb-1">対象ページ</label>
+                        <select id="edit-page-select" onchange="loadPageStaffConfig()" class="w-full p-2 border border-slate-300 rounded-lg bg-slate-50 font-bold">
+                            <option value="1">1 ページ</option>
+                            <option value="2">2 ページ</option>
+                            <option value="3">3 ページ</option>
+                            <option value="4">4 ページ</option>
+                            <option value="5">5 ページ</option>
+                            <option value="6">6 ページ</option>
+                            <option value="7">7 ページ</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-slate-500 mb-1">正担当 / 副担当 (2名)</label>
+                        <input type="text" id="staff-input" placeholder="例: 山田(正) / 佐藤(副)" class="w-full p-2 border border-slate-300 rounded-lg">
+                    </div>
+                </div>
+                <button onclick="saveStaffConfig()" class="w-full bg-slate-800 text-white font-bold py-1.5 rounded-lg text-xs hover:bg-slate-700">
+                    担当者を保存
+                </button>
+            </div>
+
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                <h3 class="font-bold text-sm text-indigo-900 flex items-center gap-2">
+                    <i class="fa-solid fa-plus-circle"></i> 点検対象・項目の追加
+                </h3>
+                <form onsubmit="handleAddEquipment(event)" class="space-y-2 text-xs">
+                    <div>
+                        <label class="block text-slate-500 mb-1">追加先ページ</label>
+                        <select id="add-target-page" class="w-full p-2 border border-slate-300 rounded-lg bg-slate-50 font-bold">
+                            <option value="1">1 ページ</option>
+                            <option value="2">2 ページ</option>
+                            <option value="3">3 ページ</option>
+                            <option value="4">4 ページ</option>
+                            <option value="5">5 ページ</option>
+                            <option value="6">6 ページ</option>
+                            <option value="7">7 ページ</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-slate-500 mb-1">設備・工具名</label>
+                        <input type="text" id="new-eq-name" required placeholder="例: 天井クレーン(小) 1.5t" class="w-full p-2 border border-slate-300 rounded-lg">
+                    </div>
+                    <div>
+                        <label class="block text-slate-500 mb-1">点検項目（改行で複数指定）</label>
+                        <textarea id="new-eq-items" rows="3" required placeholder="① 走行時異音は無いか&#10;② ブレーキは問題無いか" class="w-full p-2 border border-slate-300 rounded-lg"></textarea>
+                    </div>
+                    <button type="submit" class="w-full bg-indigo-900 text-white font-bold py-2 rounded-lg hover:bg-indigo-800">
+                        このページに対象を追加
+                    </button>
+                </form>
+            </div>
+
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                <h3 class="font-bold text-sm text-slate-700">登録済み設備一覧</h3>
+                <div id="master-list-display" class="space-y-2 text-xs divide-y divide-slate-100">
+                    </div>
+            </div>
+        </div>
+
+        <div id="view-report" class="hidden space-y-4">
+            
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center space-y-2">
+                <div class="text-xs text-slate-500 font-bold">点検達成率</div>
+                <div id="overall-progress-text" class="text-3xl font-extrabold text-indigo-900">0%</div>
+                <p class="text-[11px] text-slate-400">全7ページ・今月の点検データ集計結果</p>
+            </div>
+
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                <h3 class="font-bold text-sm text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-envelope-open-text text-indigo-600"></i> 部長へ点検結果をメール報告
+                </h3>
+                <div>
+                    <label class="block text-xs text-slate-500 mb-1">部長のメールアドレス</label>
+                    <input type="email" id="manager-email" placeholder="bucho@example.com" class="w-full p-2 text-xs border border-slate-300 rounded-lg">
+                </div>
+                <button onclick="sendManagerEmail()" class="w-full bg-emerald-600 text-white font-bold py-2.5 rounded-lg text-xs shadow hover:bg-emerald-700 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-paper-plane"></i> メール作成画面を開く
+                </button>
+            </div>
+
+            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                <h3 class="font-bold text-sm text-slate-800 flex items-center gap-2">
+                    <i class="fa-solid fa-file-excel text-emerald-600"></i> データ保存・出力
+                </h3>
+                <button onclick="exportCSV()" class="w-full bg-slate-800 text-white font-bold py-2 rounded-lg text-xs shadow hover:bg-slate-700 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-download"></i> 点検まとめデータをダウンロード (CSV)
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <div class="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-white border-t border-slate-200 p-3 flex justify-between items-center shadow-lg z-30">
+        <div class="text-xs">
+            <span class="text-slate-500">点検完了: </span>
+            <span id="completed-counter" class="font-bold text-indigo-900">0 / 0</span>
+        </div>
+        <button onclick="saveAllData()" class="bg-indigo-900 hover:bg-indigo-800 text-white text-xs font-bold px-5 py-2.5 rounded-lg shadow flex items-center gap-1.5">
+            <i class="fa-solid fa-cloud-arrow-up"></i> 全データを保存
+        </button>
+    </div>
+
+    <div id="ng-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl max-w-xs w-full p-4 shadow-2xl space-y-3 relative">
+            <div class="flex justify-between items-center border-b pb-2">
+                <h4 class="font-bold text-sm text-rose-600 flex items-center gap-1.5">
+                    <i class="fa-solid fa-triangle-exclamation"></i> NG理由を入力
+                </h4>
+                <button onclick="closeNgModal()" class="text-slate-400 hover:text-slate-600 text-sm">✕</button>
+            </div>
+
+            <div class="space-y-1">
+                <label class="text-[11px] text-slate-500 font-bold">クイック選択</label>
+                <div class="flex flex-wrap gap-1 text-xs">
+                    <button onclick="addNgTag('異音あり')" class="px-2 py-1 bg-slate-100 rounded hover:bg-rose-100 hover:text-rose-700 border">異音あり</button>
+                    <button onclick="addNgTag('破損・傷みあり')" class="px-2 py-1 bg-slate-100 rounded hover:bg-rose-100 hover:text-rose-700 border">破損・傷みあり</button>
+                    <button onclick="addNgTag('汚れ・油漏れ')" class="px-2 py-1 bg-slate-100 rounded hover:bg-rose-100 hover:text-rose-700 border">汚れ・油漏れ</button>
+                    <button onclick="addNgTag('動作不調')" class="px-2 py-1 bg-slate-100 rounded hover:bg-rose-100 hover:text-rose-700 border">動作不調</button>
+                </div>
+            </div>
+
+            <div>
+                <label class="text-[11px] text-slate-500 font-bold">詳細メモ</label>
+                <textarea id="ng-reason-text" rows="3" placeholder="具体箇所や状況を入力してください" class="w-full text-xs p-2 border border-slate-300 rounded-lg mt-1 focus:ring-2 focus:ring-rose-500 focus:outline-none"></textarea>
+            </div>
+
+            <div class="flex gap-2 pt-1">
+                <button onclick="closeNgModal()" class="flex-1 py-2 bg-slate-100 text-slate-600 font-bold rounded-lg text-xs">キャンセル</button>
+                <button onclick="confirmNgReason()" class="flex-1 py-2 bg-rose-600 text-white font-bold rounded-lg text-xs shadow hover:bg-rose-700">NGで決定</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initial Master Data Structure (7 Pages)
+        let masterData = {
+            pages: {
+                1: { staff: '山田(正) / 佐藤(副)', equipment: [
+                    { id: 'eq_1_1', name: '電動フォークリフト', items: [
+                        { id: 'i_1_1_1', text: '① 設備始業点検表で問題は発生していないか' },
+                        { id: 'i_1_1_2', text: '② 始業前点検は確実に行われているか' },
+                        { id: 'i_1_1_3', text: '③ 年次点検日はすぎていないか' }
+                    ]}
+                ]},
+                2: { staff: '田中(正) / 鈴木(副)', equipment: [
+                    { id: 'eq_2_1', name: '天井クレーン(大) 2t', items: [
+                        { id: 'i_2_1_1', text: '① 走行時異音は無いか' },
+                        { id: 'i_2_1_2', text: '② ブレーキは問題無いか' },
+                        { id: 'i_2_1_3', text: '③ ワイヤーに傷み・ねじれは無いか' }
+                    ]},
+                    { id: 'eq_2_2', name: 'VAC扉ドッキング治具', items: [
+                        { id: 'i_2_2_1', text: '① 移動キャスターに問題は無いか' },
+                        { id: 'i_2_2_2', text: '② 上下動作に問題は無いか' }
+                    ]}
+                ]},
+                3: { staff: '未定', equipment: [] },
+                4: { staff: '未定', equipment: [] },
+                5: { staff: '未定', equipment: [] },
+                6: { staff: '未定', equipment: [] },
+                7: { staff: '未定', equipment: [] }
+            }
+        };
+
+        // Inspection State: { "4月_i_1_1_1": { status: "OK", reason: "" } }
+        let inspectionResults = {};
+        let currentMonth = '4月';
+        let currentPage = 1;
+        let activeNgKey = null;
+
+        // Load Saved Local Storage
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedMaster = localStorage.getItem('inspection_master_v1');
+            const savedResults = localStorage.getItem('inspection_results_v1');
+            if (savedMaster) masterData = JSON.parse(savedMaster);
+            if (savedResults) inspectionResults = JSON.parse(savedResults);
+
+            renderCurrentPage();
+            renderMasterList();
+            updateProgress();
+        });
+
+        // Save All to Storage
+        function saveAllData() {
+            localStorage.setItem('inspection_master_v1', JSON.stringify(masterData));
+            localStorage.setItem('inspection_results_v1', JSON.stringify(inspectionResults));
+            alert('全データをローカルに更新・保存しました！');
+        }
+
+        // Switch Month
+        function selectMonth(m) {
+            currentMonth = m;
+            document.querySelectorAll('.month-btn').forEach(btn => {
+                if(btn.innerText === m) {
+                    btn.className = 'month-btn px-3 py-1 rounded-full bg-emerald-500 text-white shadow shrink-0';
+                } else {
+                    btn.className = 'month-btn px-3 py-1 rounded-full bg-indigo-950/60 text-indigo-200 hover:bg-indigo-800 shrink-0';
+                }
+            });
+            renderCurrentPage();
+            updateProgress();
+        }
+
+        // Switch Page (1~7)
+        function selectPage(p) {
+            currentPage = p;
+            document.querySelectorAll('.page-btn').forEach((btn, idx) => {
+                if(idx + 1 === p) {
+                    btn.className = 'page-btn py-1.5 rounded-lg bg-indigo-900 text-white shadow';
+                } else {
+                    btn.className = 'page-btn py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200';
+                }
+            });
+            renderCurrentPage();
+        }
+
+        // Render Current Page Items
+        function renderCurrentPage() {
+            const pData = masterData.pages[currentPage] || { staff: '未定', equipment: [] };
+            document.getElementById('page-staff-display').innerText = `担当: ${pData.staff}`;
+
+            const container = document.getElementById('equipment-cards-container');
+            container.innerHTML = '';
+
+            if (pData.equipment.length === 0) {
+                container.innerHTML = `<div class="p-8 text-center text-xs text-slate-400 bg-white rounded-xl border border-dashed">このページには点検対象が設定されていません。<br>「対象・項目編集」タブから追加できます。</div>`;
+                return;
+            }
+
+            pData.equipment.forEach(eq => {
+                const card = document.createElement('div');
+                card.className = 'bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden';
+
+                let itemsHtml = eq.items.map(item => {
+                    const key = `${currentMonth}_${item.id}`;
+                    const res = inspectionResults[key] || { status: '', reason: '' };
+
+                    return `
+                        <div class="p-3 border-b border-slate-100 last:border-none space-y-2">
+                            <p class="text-xs font-semibold text-slate-700">${item.text}</p>
+                            <div class="flex gap-2">
+                                <button onclick="setResult('${key}', 'OK')" class="flex-1 py-1.5 rounded-lg text-xs font-bold border transition ${res.status === 'OK' ? 'bg-emerald-600 text-white border-emerald-600 shadow' : 'bg-slate-50 text-slate-600 border-slate-200'}">
+                                    <i class="fa-solid fa-check mr-1"></i>良 (OK)
+                                </button>
+                                <button onclick="openNgModal('${key}')" class="flex-1 py-1.5 rounded-lg text-xs font-bold border transition ${res.status === 'NG' ? 'bg-rose-600 text-white border-rose-600 shadow' : 'bg-slate-50 text-slate-600 border-slate-200'}">
+                                    <i class="fa-solid fa-xmark mr-1"></i>否 (NG)
+                                </button>
+                            </div>
+                            ${res.status === 'NG' ? `<div class="text-[11px] bg-rose-50 border border-rose-200 text-rose-800 p-1.5 rounded-lg"><strong>NG理由:</strong> ${res.reason || '指定なし'}</div>` : ''}
+                        </div>
+                    `;
+                }).join('');
+
+                card.innerHTML = `
+                    <div class="bg-indigo-50/50 p-2.5 border-b border-slate-200 flex justify-between items-center">
+                        <span class="font-bold text-xs text-indigo-950">${eq.name}</span>
+                        <span class="text-[10px] text-indigo-600 bg-indigo-100 px-2 py-0.5 rounded-full font-semibold">${eq.items.length} 項目</span>
+                    </div>
+                    <div>${itemsHtml}</div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // Set OK Result
+        function setResult(key, status) {
+            inspectionResults[key] = { status: status, reason: '' };
+            renderCurrentPage();
+            updateProgress();
+        }
+
+        // Open NG Modal
+        function openNgModal(key) {
+            activeNgKey = key;
+            const currentReason = (inspectionResults[key] && inspectionResults[key].reason) || '';
+            document.getElementById('ng-reason-text').value = currentReason;
+            document.getElementById('ng-modal').classList.remove('hidden');
+        }
+
+        function closeNgModal() {
+            document.getElementById('ng-modal').classList.add('hidden');
+            activeNgKey = null;
+        }
+
+        function addNgTag(tag) {
+            const txt = document.getElementById('ng-reason-text');
+            txt.value = txt.value ? `${txt.value}, ${tag}` : tag;
+        }
+
+        function confirmNgReason() {
+            if (!activeNgKey) return;
+            const reason = document.getElementById('ng-reason-text').value.trim();
+            inspectionResults[activeNgKey] = { status: 'NG', reason: reason };
+            closeNgModal();
+            renderCurrentPage();
+            updateProgress();
+        }
+
+        // Main Tab Switch
+        function switchMainTab(tab) {
+            document.getElementById('view-check').classList.add('hidden');
+            document.getElementById('view-master').classList.add('hidden');
+            document.getElementById('view-report').classList.add('hidden');
+
+            document.getElementById('tab-check').className = 'flex-1 py-2 rounded-lg text-slate-600 text-center hover:bg-slate-100';
+            document.getElementById('tab-master').className = 'flex-1 py-2 rounded-lg text-slate-600 text-center hover:bg-slate-100';
+            document.getElementById('tab-report').className = 'flex-1 py-2 rounded-lg text-slate-600 text-center hover:bg-slate-100';
+
+            document.getElementById(`view-${tab}`).classList.remove('hidden');
+            document.getElementById(`tab-${tab}`).className = 'flex-1 py-2 rounded-lg bg-indigo-900 text-white text-center shadow';
+
+            if (tab === 'master') loadPageStaffConfig();
+        }
+
+        // Update Progress Counters
+        function updateProgress() {
+            let total = 0, completed = 0;
+            Object.keys(masterData.pages).forEach(p => {
+                masterData.pages[p].equipment.forEach(eq => {
+                    eq.items.forEach(i => {
+                        total++;
+                        const key = `${currentMonth}_${i.id}`;
+                        if (inspectionResults[key] && inspectionResults[key].status) completed++;
+                    });
+                });
+            });
+
+            document.getElementById('completed-counter').innerText = `${completed} / ${total}`;
+            const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+            document.getElementById('overall-progress-text').innerText = `${pct}%`;
+        }
+
+        // Master Management Logic
+        function loadPageStaffConfig() {
+            const p = document.getElementById('edit-page-select').value;
+            document.getElementById('staff-input').value = masterData.pages[p].staff || '';
+        }
+
+        function saveStaffConfig() {
+            const p = document.getElementById('edit-page-select').value;
+            masterData.pages[p].staff = document.getElementById('staff-input').value.trim();
+            saveAllData();
+            renderCurrentPage();
+        }
+
+        function handleAddEquipment(e) {
+            e.preventDefault();
+            const targetP = document.getElementById('add-target-page').value;
+            const name = document.getElementById('new-eq-name').value.trim();
+            const itemsText = document.getElementById('new-eq-items').value.trim();
+
+            const itemsArr = itemsText.split('\n').filter(t => t.trim()).map((t, idx) => ({
+                id: `i_user_${Date.now()}_${idx}`,
+                text: t.trim()
+            }));
+
+            masterData.pages[targetP].equipment.push({
+                id: `eq_user_${Date.now()}`,
+                name: name,
+                items: itemsArr
+            });
+
+            document.getElementById('new-eq-name').value = '';
+            document.getElementById('new-eq-items').value = '';
+            saveAllData();
+            renderMasterList();
+            renderCurrentPage();
+            alert('新しい設備を追加しました！');
+        }
+
+        function renderMasterList() {
+            const container = document.getElementById('master-list-display');
+            container.innerHTML = '';
+            Object.keys(masterData.pages).forEach(p => {
+                const eqs = masterData.pages[p].equipment;
+                eqs.forEach(eq => {
+                    const div = document.createElement('div');
+                    div.className = 'pt-2 flex justify-between items-start';
+                    div.innerHTML = `
+                        <div>
+                            <span class="font-bold text-slate-800">[${p}P] ${eq.name}</span>
+                            <div class="text-[11px] text-slate-500">${eq.items.length} 項目</div>
+                        </div>
+                        <button onclick="removeEquipment(${p}, '${eq.id}')" class="text-rose-500 hover:text-rose-700 text-xs p-1">削除</button>
+                    `;
+                    container.appendChild(div);
+                });
+            });
+        }
+
+        function removeEquipment(page, eqId) {
+            if (confirm('この設備と点検項目を削除しますか？')) {
+                masterData.pages[page].equipment = masterData.pages[page].equipment.filter(e => e.id !== eqId);
+                saveAllData();
+                renderMasterList();
+                renderCurrentPage();
+            }
+        }
+
+        // Mail Send Feature for Manager
+        function sendManagerEmail() {
+            const email = document.getElementById('manager-email').value || '';
+            let ngSummary = [];
+            let totalChecked = 0;
+
+            Object.keys(masterData.pages).forEach(p => {
+                masterData.pages[p].equipment.forEach(eq => {
+                    eq.items.forEach(i => {
+                        const key = `${currentMonth}_${i.id}`;
+                        const res = inspectionResults[key];
+                        if (res && res.status) totalChecked++;
+                        if (res && res.status === 'NG') {
+                            ngSummary.push(`・[${p}P] ${eq.name} - ${i.text}\n  理由: ${res.reason || '記述なし'}`);
+                        }
+                    });
+                });
+            });
+
+            const subject = encodeURIComponent(`【設備工具点検結果報告】${currentMonth}度 自主検査結果`);
+            let bodyText = `部長\n\nお疲れ様です。\n${currentMonth}の設備・工具点検結果をご報告いたします。\n\n`;
+            bodyText += `■ 点検実施月: ${currentMonth}\n`;
+            bodyText += `■ 要対応(NG)項目数: ${ngSummary.length} 件\n\n`;
+
+            if (ngSummary.length > 0) {
+                bodyText += `【不具合・要確認項目一覧】\n` + ngSummary.join('\n') + `\n\n`;
+            } else {
+                bodyText += `全点検項目において異常はありませんでした。\n\n`;
+            }
+
+            bodyText += `詳細は添付または管理システムにて確認可能です。\nご確認のほどよろしくお願いいたします。`;
+
+            window.location.href = `mailto:${email}?subject=${subject}&body=${encodeURIComponent(bodyText)}`;
+        }
+
+        // CSV Export Feature
+        function exportCSV() {
+            let csv = "点検月,ページ,設備名,点検項目,結果,NG理由・メモ\n";
+            Object.keys(masterData.pages).forEach(p => {
+                masterData.pages[p].equipment.forEach(eq => {
+                    eq.items.forEach(i => {
+                        ['4月','5月','6月','7月','8月','9月'].forEach(m => {
+                            const key = `${m}_${i.id}`;
+                            const res = inspectionResults[key] || { status: '未点検', reason: '' };
+                            csv += `"${m}","${p}P","${eq.name}","${i.text}","${res.status}","${res.reason}"\n`;
+                        });
+                    });
+                });
+            });
+
+            const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `設備工具点検結果_2026上期_全集計.csv`;
+            link.click();
+        }
+    </script>
+</body>
+</html>
