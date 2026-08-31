@@ -14,6 +14,7 @@
 </head>
 <body class="bg-slate-100 text-slate-800 antialiased min-h-screen flex flex-col max-w-lg mx-auto border-x border-slate-200 relative pb-24">
 
+    <!-- Header -->
     <header class="bg-indigo-900 text-white p-4 sticky top-0 z-30 shadow-md">
         <div class="flex justify-between items-center mb-2">
             <h1 class="text-base font-bold flex items-center gap-2">
@@ -34,6 +35,7 @@
         </div>
     </header>
 
+    <!-- Main Navigation Tabs -->
     <nav class="bg-white border-b border-slate-200 p-2 flex text-xs font-bold gap-1 sticky top-[90px] z-20 shadow-sm">
         <button onclick="switchMainTab('check')" id="tab-check" class="flex-1 py-2 rounded-lg bg-indigo-900 text-white text-center shadow">
             <i class="fa-solid fa-pen-to-square mr-1"></i>点検入力
@@ -46,28 +48,24 @@
         </button>
     </nav>
 
+    <!-- Content Area -->
     <main class="p-3 flex-1 space-y-4">
 
+        <!-- 1. 点検入力 VIEW -->
         <div id="view-check" class="space-y-3">
             <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
                 <div class="text-[11px] font-bold text-slate-500 mb-1.5 flex justify-between items-center">
                     <span><i class="fa-regular fa-file-lines mr-1"></i>シートページ選択 (全7ページ)</span>
                     <span id="page-staff-display" class="text-indigo-600">担当: 設定なし</span>
                 </div>
-                <div class="grid grid-cols-7 gap-1 text-xs font-bold text-center">
-                    <button onclick="selectPage(1)" class="page-btn py-1.5 rounded-lg bg-indigo-900 text-white shadow">1P</button>
-                    <button onclick="selectPage(2)" class="page-btn py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200">2P</button>
-                    <button onclick="selectPage(3)" class="page-btn py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200">3P</button>
-                    <button onclick="selectPage(4)" class="page-btn py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200">4P</button>
-                    <button onclick="selectPage(5)" class="page-btn py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200">5P</button>
-                    <button onclick="selectPage(6)" class="page-btn py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200">6P</button>
-                    <button onclick="selectPage(7)" class="page-btn py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200">7P</button>
+                <div class="grid grid-cols-7 gap-1 text-xs font-bold text-center" id="page-buttons-container">
                 </div>
             </div>
 
             <div id="equipment-cards-container" class="space-y-3"></div>
         </div>
 
+        <!-- 2. マスター編集 VIEW -->
         <div id="view-master" class="hidden space-y-4">
             <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
                 <h3 class="font-bold text-sm text-indigo-900 flex items-center gap-2">
@@ -133,11 +131,15 @@
             </div>
         </div>
 
+        <!-- 3. 結果・送信 VIEW -->
         <div id="view-report" class="hidden space-y-4">
             <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center space-y-2">
                 <div class="text-xs text-slate-500 font-bold">点検達成率</div>
                 <div id="overall-progress-text" class="text-3xl font-extrabold text-indigo-900">0%</div>
                 <p id="report-subtext" class="text-[11px] text-slate-400">全7ページ・今月の点検データ集計結果</p>
+                <div id="uninspection-alert" class="hidden text-xs bg-amber-50 border border-amber-300 text-amber-800 p-2 rounded-lg font-bold">
+                    ⚠️ 未点検の項目が残っています！
+                </div>
             </div>
 
             <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
@@ -165,6 +167,7 @@
 
     </main>
 
+    <!-- Bottom Bar -->
     <div class="fixed bottom-0 left-0 right-0 max-w-lg mx-auto bg-white border-t border-slate-200 p-3 flex justify-between items-center shadow-lg z-30">
         <div class="text-xs">
             <span class="text-slate-500">点検完了: </span>
@@ -174,6 +177,7 @@
             <i class="fa-solid fa-cloud-arrow-up"></i> 全データを保存
         </button>
     </div>
+    <!-- 歯車（設定）モーダル -->
     <div id="settings-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl max-w-xs w-full p-4 shadow-2xl space-y-4 relative">
             <div class="flex justify-between items-center border-b pb-2">
@@ -185,12 +189,7 @@
             <div class="space-y-3 text-xs">
                 <div>
                     <label class="block text-slate-500 font-bold mb-1">点検年度</label>
-                    <select id="setting-year" class="w-full p-2 border border-slate-300 rounded-lg font-bold bg-slate-50">
-                        <option value="2025年度">2025年度</option>
-                        <option value="2026年度" selected>2026年度</option>
-                        <option value="2027年度">2027年度</option>
-                        <option value="2028年度">2028年度</option>
-                    </select>
+                    <select id="setting-year" class="w-full p-2 border border-slate-300 rounded-lg font-bold bg-slate-50"></select>
                 </div>
                 <div>
                     <label class="block text-slate-500 font-bold mb-1">期区分</label>
@@ -211,11 +210,12 @@
         </div>
     </div>
 
+    <!-- NG Reason & Photo Modal -->
     <div id="ng-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl max-w-xs w-full p-4 shadow-2xl space-y-3 relative">
+        <div class="bg-white rounded-2xl max-w-xs w-full p-4 shadow-2xl space-y-3 relative max-h-[90vh] overflow-y-auto">
             <div class="flex justify-between items-center border-b pb-2">
                 <h4 class="font-bold text-sm text-rose-600 flex items-center gap-1.5">
-                    <i class="fa-solid fa-triangle-exclamation"></i> NG理由を入力
+                    <i class="fa-solid fa-triangle-exclamation"></i> NG理由・写真登録
                 </h4>
                 <button onclick="closeNgModal()" class="text-slate-400 hover:text-slate-600 text-sm">✕</button>
             </div>
@@ -230,8 +230,24 @@
             </div>
             <div>
                 <label class="text-[11px] text-slate-500 font-bold">詳細メモ</label>
-                <textarea id="ng-reason-text" rows="3" placeholder="具体箇所や状況を入力してください" class="w-full text-xs p-2 border border-slate-300 rounded-lg mt-1 focus:ring-2 focus:ring-rose-500 focus:outline-none"></textarea>
+                <textarea id="ng-reason-text" rows="2" placeholder="具体箇所や状況を入力してください" class="w-full text-xs p-2 border border-slate-300 rounded-lg mt-1 focus:ring-2 focus:ring-rose-500 focus:outline-none"></textarea>
             </div>
+
+            <!-- 現場写真添付領域（任意） -->
+            <div>
+                <label class="text-[11px] text-slate-500 font-bold block mb-1">
+                    不具合写真の添付 <span class="text-slate-400 font-normal">（任意）</span>
+                </label>
+                <input type="file" id="ng-photo-input" accept="image/*" capture="environment" class="hidden" onchange="handlePhotoSelect(event)">
+                <button onclick="document.getElementById('ng-photo-input').click()" class="w-full py-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 rounded-lg text-xs font-bold text-slate-700 flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-camera text-indigo-600"></i> 写真を撮影・選択
+                </button>
+                <div id="ng-photo-preview-container" class="mt-2 hidden relative">
+                    <img id="ng-photo-preview" class="w-full h-32 object-cover rounded-lg border">
+                    <button onclick="removeNgPhoto()" class="absolute top-1 right-1 bg-rose-600 text-white rounded-full w-6 h-6 text-xs font-bold shadow">✕</button>
+                </div>
+            </div>
+
             <div class="flex gap-2 pt-1">
                 <button onclick="closeNgModal()" class="flex-1 py-2 bg-slate-100 text-slate-600 font-bold rounded-lg text-xs">キャンセル</button>
                 <button onclick="confirmNgReason()" class="flex-1 py-2 bg-rose-600 text-white font-bold rounded-lg text-xs shadow hover:bg-rose-700">NGで決定</button>
@@ -245,6 +261,7 @@
         let currentMonth = '4月';
         let currentPage = 1;
         let activeNgKey = null;
+        let tempPhotoData = '';
 
         const termMonths = {
             '上期': ['4月', '5月', '6月', '7月', '8月', '9月'],
@@ -282,9 +299,9 @@
         let inspectionResults = {};
 
         document.addEventListener('DOMContentLoaded', () => {
-            const savedMaster = localStorage.getItem('inspection_master_v2');
-            const savedResults = localStorage.getItem('inspection_results_v2');
-            const savedConfig = localStorage.getItem('inspection_config_v2');
+            const savedMaster = localStorage.getItem('inspection_master_v3');
+            const savedResults = localStorage.getItem('inspection_results_v3');
+            const savedConfig = localStorage.getItem('inspection_config_v3');
 
             if (savedMaster) masterData = JSON.parse(savedMaster);
             if (savedResults) inspectionResults = JSON.parse(savedResults);
@@ -295,22 +312,44 @@
                 currentMonth = conf.month || (currentTerm === '上期' ? '4月' : '10月');
             }
 
+            generateYearOptions();
             updateHeaderDisplay();
             renderMonthButtons();
+            renderPageButtons();
             renderCurrentPage();
             renderMasterList();
             updateProgress();
         });
 
+        function generateYearOptions() {
+            const yearSelect = document.getElementById('setting-year');
+            const currentRealYear = new Date().getFullYear();
+            const startYear = currentRealYear - 1;
+            const endYear = currentRealYear + 10;
+
+            let optionsHtml = '';
+            for (let y = startYear; y <= endYear; y++) {
+                const val = `${y}年度`;
+                optionsHtml += `<option value="${val}">${val}</option>`;
+            }
+            yearSelect.innerHTML = optionsHtml;
+        }
+
         function saveAllData() {
-            localStorage.setItem('inspection_master_v2', JSON.stringify(masterData));
-            localStorage.setItem('inspection_results_v2', JSON.stringify(inspectionResults));
-            localStorage.setItem('inspection_config_v2', JSON.stringify({
+            localStorage.setItem('inspection_master_v3', JSON.stringify(masterData));
+            localStorage.setItem('inspection_results_v3', JSON.stringify(inspectionResults));
+            localStorage.setItem('inspection_config_v3', JSON.stringify({
                 year: currentYear,
                 term: currentTerm,
                 month: currentMonth
             }));
-            alert('全データを保存しました！');
+            
+            const stats = getUninspectedCount();
+            if (stats.uninspected > 0) {
+                alert(`データを保存しました。\n（未点検の項目がまだ ${stats.uninspected} 件残っています）`);
+            } else {
+                alert('全データを保存しました！今月の点検は完了しています。');
+            }
         }
 
         function updateHeaderDisplay() {
@@ -332,22 +371,79 @@
             `).join('');
         }
 
+        function renderPageButtons() {
+            const container = document.getElementById('page-buttons-container');
+            let html = '';
+
+            for (let p = 1; p <= 7; p++) {
+                const status = getPageStatus(p);
+                const isActive = p === currentPage;
+                
+                let badgeClass = 'bg-slate-300 text-slate-700';
+                let badgeText = '空';
+
+                if (status.total > 0) {
+                    if (status.completed === status.total) {
+                        badgeClass = 'bg-emerald-500 text-white';
+                        badgeText = '済';
+                    } else {
+                        badgeClass = 'bg-amber-500 text-white animate-pulse';
+                        badgeText = '未';
+                    }
+                }
+
+                const activeClass = isActive 
+                    ? 'bg-indigo-900 text-white shadow ring-2 ring-indigo-400' 
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200';
+
+                html += `
+                    <button onclick="selectPage(${p})" class="page-btn py-1.5 rounded-lg ${activeClass} relative flex flex-col items-center justify-center">
+                        <span>${p}P</span>
+                        <span class="text-[9px] px-1 rounded-full ${badgeClass} font-bold mt-0.5">${badgeText}</span>
+                    </button>
+                `;
+            }
+            container.innerHTML = html;
+        }
+
+        function getPageStatus(p) {
+            let total = 0, completed = 0;
+            const eqs = (masterData.pages[p] && masterData.pages[p].equipment) || [];
+            eqs.forEach(eq => {
+                eq.items.forEach(i => {
+                    total++;
+                    const key = `${currentYear}_${currentMonth}_${i.id}`;
+                    if (inspectionResults[key] && inspectionResults[key].status) completed++;
+                });
+            });
+            return { total, completed };
+        }
+
+        function getUninspectedCount() {
+            let total = 0, completed = 0;
+            Object.keys(masterData.pages).forEach(p => {
+                masterData.pages[p].equipment.forEach(eq => {
+                    eq.items.forEach(i => {
+                        total++;
+                        const key = `${currentYear}_${currentMonth}_${i.id}`;
+                        if (inspectionResults[key] && inspectionResults[key].status) completed++;
+                    });
+                });
+            });
+            return { total, completed, uninspected: total - completed };
+        }
+
         function selectMonth(m) {
             currentMonth = m;
             renderMonthButtons();
+            renderPageButtons();
             renderCurrentPage();
             updateProgress();
         }
 
         function selectPage(p) {
             currentPage = p;
-            document.querySelectorAll('.page-btn').forEach((btn, idx) => {
-                if(idx + 1 === p) {
-                    btn.className = 'page-btn py-1.5 rounded-lg bg-indigo-900 text-white shadow';
-                } else {
-                    btn.className = 'page-btn py-1.5 rounded-lg bg-slate-100 text-slate-600 hover:bg-slate-200';
-                }
-            });
+            renderPageButtons();
             renderCurrentPage();
         }
 
@@ -369,7 +465,7 @@
 
                 let itemsHtml = eq.items.map(item => {
                     const key = `${currentYear}_${currentMonth}_${item.id}`;
-                    const res = inspectionResults[key] || { status: '', reason: '' };
+                    const res = inspectionResults[key] || { status: '', reason: '', photo: '' };
 
                     return `
                         <div class="p-3 border-b border-slate-100 last:border-none space-y-2">
@@ -382,7 +478,12 @@
                                     <i class="fa-solid fa-xmark mr-1"></i>否 (NG)
                                 </button>
                             </div>
-                            ${res.status === 'NG' ? `<div class="text-[11px] bg-rose-50 border border-rose-200 text-rose-800 p-1.5 rounded-lg"><strong>NG理由:</strong> ${res.reason || '指定なし'}</div>` : ''}
+                            ${res.status === 'NG' ? `
+                                <div class="text-[11px] bg-rose-50 border border-rose-200 text-rose-800 p-2 rounded-lg space-y-1">
+                                    <div><strong>NG理由:</strong> ${res.reason || '指定なし'}</div>
+                                    ${res.photo ? `<div class="mt-1"><img src="${res.photo}" class="h-20 rounded border object-cover"></div>` : ''}
+                                </div>
+                            ` : ''}
                         </div>
                     `;
                 }).join('');
@@ -399,21 +500,34 @@
         }
 
         function setResult(key, status) {
-            inspectionResults[key] = { status: status, reason: '' };
+            inspectionResults[key] = { status: status, reason: '', photo: '' };
+            renderPageButtons();
             renderCurrentPage();
             updateProgress();
         }
 
         function openNgModal(key) {
             activeNgKey = key;
-            const currentReason = (inspectionResults[key] && inspectionResults[key].reason) || '';
-            document.getElementById('ng-reason-text').value = currentReason;
+            const res = inspectionResults[key] || {};
+            document.getElementById('ng-reason-text').value = res.reason || '';
+            tempPhotoData = res.photo || '';
+
+            const preview = document.getElementById('ng-photo-preview');
+            const container = document.getElementById('ng-photo-preview-container');
+            if (tempPhotoData) {
+                preview.src = tempPhotoData;
+                container.classList.remove('hidden');
+            } else {
+                container.classList.add('hidden');
+            }
+
             document.getElementById('ng-modal').classList.remove('hidden');
         }
 
         function closeNgModal() {
             document.getElementById('ng-modal').classList.add('hidden');
             activeNgKey = null;
+            tempPhotoData = '';
         }
 
         function addNgTag(tag) {
@@ -421,11 +535,31 @@
             txt.value = txt.value ? `${txt.value}, ${tag}` : tag;
         }
 
+        function handlePhotoSelect(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                tempPhotoData = event.target.result;
+                document.getElementById('ng-photo-preview').src = tempPhotoData;
+                document.getElementById('ng-photo-preview-container').classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeNgPhoto() {
+            tempPhotoData = '';
+            document.getElementById('ng-photo-preview-container').classList.add('hidden');
+            document.getElementById('ng-photo-input').value = '';
+        }
+
         function confirmNgReason() {
             if (!activeNgKey) return;
             const reason = document.getElementById('ng-reason-text').value.trim();
-            inspectionResults[activeNgKey] = { status: 'NG', reason: reason };
+            inspectionResults[activeNgKey] = { status: 'NG', reason: reason, photo: tempPhotoData };
             closeNgModal();
+            renderPageButtons();
             renderCurrentPage();
             updateProgress();
         }
@@ -457,6 +591,7 @@
             closeSettingsModal();
             updateHeaderDisplay();
             renderMonthButtons();
+            renderPageButtons();
             renderCurrentPage();
             updateProgress();
             saveAllData();
@@ -478,20 +613,19 @@
         }
 
         function updateProgress() {
-            let total = 0, completed = 0;
-            Object.keys(masterData.pages).forEach(p => {
-                masterData.pages[p].equipment.forEach(eq => {
-                    eq.items.forEach(i => {
-                        total++;
-                        const key = `${currentYear}_${currentMonth}_${i.id}`;
-                        if (inspectionResults[key] && inspectionResults[key].status) completed++;
-                    });
-                });
-            });
+            const stats = getUninspectedCount();
 
-            document.getElementById('completed-counter').innerText = `${completed} / ${total}`;
-            const pct = total > 0 ? Math.round((completed / total) * 100) : 0;
+            document.getElementById('completed-counter').innerText = `${stats.completed} / ${stats.total}`;
+            const pct = stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0;
             document.getElementById('overall-progress-text').innerText = `${pct}%`;
+
+            const alertBox = document.getElementById('uninspection-alert');
+            if (stats.uninspected > 0) {
+                alertBox.innerText = `⚠️ 未点検の項目が ${stats.uninspected} 件残っています！`;
+                alertBox.classList.remove('hidden');
+            } else {
+                alertBox.classList.add('hidden');
+            }
         }
 
         function loadPageStaffConfig() {
@@ -527,6 +661,7 @@
             document.getElementById('new-eq-items').value = '';
             saveAllData();
             renderMasterList();
+            renderPageButtons();
             renderCurrentPage();
             alert('新しい設備を追加しました！');
         }
@@ -556,6 +691,7 @@
                 masterData.pages[page].equipment = masterData.pages[page].equipment.filter(e => e.id !== eqId);
                 saveAllData();
                 renderMasterList();
+                renderPageButtons();
                 renderCurrentPage();
             }
         }
@@ -570,7 +706,8 @@
                         const key = `${currentYear}_${currentMonth}_${i.id}`;
                         const res = inspectionResults[key];
                         if (res && res.status === 'NG') {
-                            ngSummary.push(`・[${p}P] ${eq.name} - ${i.text}\n  理由: ${res.reason || '記述なし'}`);
+                            const hasPhoto = res.photo ? ' (写真添付あり)' : '';
+                            ngSummary.push(`・[${p}P] ${eq.name} - ${i.text}\n  理由: ${res.reason || '記述なし'}${hasPhoto}`);
                         }
                     });
                 });
@@ -593,7 +730,7 @@
         }
 
         function exportCSV() {
-            let csv = "年度,期区分,点検月,ページ,設備名,点検項目,結果,NG理由・メモ\n";
+            let csv = "年度,期区分,点検月,ページ,設備名,点検項目,結果,NG理由・メモ,写真添付\n";
             const allMonths = [...termMonths['上期'], ...termMonths['下期']];
 
             Object.keys(masterData.pages).forEach(p => {
@@ -601,8 +738,9 @@
                     eq.items.forEach(i => {
                         allMonths.forEach(m => {
                             const key = `${currentYear}_${m}_${i.id}`;
-                            const res = inspectionResults[key] || { status: '未点検', reason: '' };
-                            csv += `"${currentYear}","${currentTerm}","${m}","${p}P","${eq.name}","${i.text}","${res.status}","${res.reason}"\n`;
+                            const res = inspectionResults[key] || { status: '未点検', reason: '', photo: '' };
+                            const photoFlag = res.photo ? 'あり' : 'なし';
+                            csv += `"${currentYear}","${currentTerm}","${m}","${p}P","${eq.name}","${i.text}","${res.status}","${res.reason}","${photoFlag}"\n`;
                         });
                     });
                 });
