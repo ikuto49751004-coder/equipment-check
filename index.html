@@ -25,7 +25,7 @@
                 <span id="header-period-badge" class="text-xs bg-indigo-800 text-indigo-200 px-2.5 py-1 rounded-full border border-indigo-700 font-medium">
                     2026年度 上期
                 </span>
-                <button onclick="openSettingsModal()" class="w-8 h-8 rounded-full bg-indigo-800 hover:bg-indigo-700 text-indigo-200 flex items-center justify-center transition" title="設定・リセット">
+                <button onclick="openSettingsModal()" class="w-8 h-8 rounded-full bg-indigo-800 hover:bg-indigo-700 text-indigo-200 flex items-center justify-center transition shadow" title="設定・編集・初期化">
                     <i class="fa-solid fa-gear text-sm"></i>
                 </button>
             </div>
@@ -40,9 +40,6 @@
         <button onclick="switchMainTab('check')" id="tab-check" class="flex-1 py-2 rounded-lg bg-indigo-900 text-white text-center shadow">
             <i class="fa-solid fa-pen-to-square mr-1"></i>点検入力
         </button>
-        <button onclick="switchMainTab('master')" id="tab-master" class="flex-1 py-2 rounded-lg text-slate-600 text-center hover:bg-slate-100">
-            <i class="fa-solid fa-sliders mr-1"></i>対象・項目編集
-        </button>
         <button onclick="switchMainTab('report')" id="tab-report" class="flex-1 py-2 rounded-lg text-slate-600 text-center hover:bg-slate-100">
             <i class="fa-solid fa-paper-plane mr-1"></i>結果・送信
         </button>
@@ -53,85 +50,25 @@
 
         <!-- 1. 点検入力 VIEW -->
         <div id="view-check" class="space-y-3">
-            <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm">
-                <div class="text-[11px] font-bold text-slate-500 mb-1.5 flex justify-between items-center">
+            <div class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-sm space-y-2">
+                <div class="text-[11px] font-bold text-slate-500 flex justify-between items-center">
                     <span><i class="fa-regular fa-file-lines mr-1"></i>シートページ選択 (全7ページ)</span>
                     <span id="page-staff-display" class="text-indigo-600">担当: 設定なし</span>
                 </div>
                 <div class="grid grid-cols-7 gap-1 text-xs font-bold text-center" id="page-buttons-container">
+                </div>
+                <div class="pt-1 border-t border-slate-100 flex justify-between items-center">
+                    <span class="text-[11px] text-slate-400">※対象や項目の編集は右上の歯車ボタンから行えます</span>
+                    <button onclick="resetCheckResults()" class="text-[11px] bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 px-2.5 py-1 rounded-md font-bold flex items-center gap-1 transition">
+                        <i class="fa-solid fa-rotate-left"></i> 今月のチェック解散・リセット
+                    </button>
                 </div>
             </div>
 
             <div id="equipment-cards-container" class="space-y-3"></div>
         </div>
 
-        <!-- 2. マスター編集 VIEW -->
-        <div id="view-master" class="hidden space-y-4">
-            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
-                <h3 class="font-bold text-sm text-indigo-900 flex items-center gap-2">
-                    <i class="fa-solid fa-user-gear"></i> ページ担当者設定
-                </h3>
-                <div class="grid grid-cols-2 gap-2 text-xs">
-                    <div>
-                        <label class="block text-slate-500 mb-1">対象ページ</label>
-                        <select id="edit-page-select" onchange="loadPageStaffConfig()" class="w-full p-2 border border-slate-300 rounded-lg bg-slate-50 font-bold">
-                            <option value="1">1 ページ</option>
-                            <option value="2">2 ページ</option>
-                            <option value="3">3 ページ</option>
-                            <option value="4">4 ページ</option>
-                            <option value="5">5 ページ</option>
-                            <option value="6">6 ページ</option>
-                            <option value="7">7 ページ</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-slate-500 mb-1">正担当 / 副担当 (2名)</label>
-                        <input type="text" id="staff-input" placeholder="例: 山田(正) / 佐藤(副)" class="w-full p-2 border border-slate-300 rounded-lg">
-                    </div>
-                </div>
-                <button onclick="saveStaffConfig()" class="w-full bg-slate-800 text-white font-bold py-1.5 rounded-lg text-xs hover:bg-slate-700">
-                    このページの担当者を保存
-                </button>
-            </div>
-
-            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
-                <h3 class="font-bold text-sm text-indigo-900 flex items-center gap-2">
-                    <i class="fa-solid fa-plus-circle"></i> 点検対象・項目の追加
-                </h3>
-                <form onsubmit="handleAddEquipment(event)" class="space-y-2 text-xs">
-                    <div>
-                        <label class="block text-slate-500 mb-1">追加先ページ</label>
-                        <select id="add-target-page" class="w-full p-2 border border-slate-300 rounded-lg bg-slate-50 font-bold">
-                            <option value="1">1 ページ</option>
-                            <option value="2">2 ページ</option>
-                            <option value="3">3 ページ</option>
-                            <option value="4">4 ページ</option>
-                            <option value="5">5 ページ</option>
-                            <option value="6">6 ページ</option>
-                            <option value="7">7 ページ</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-slate-500 mb-1">設備・工具名</label>
-                        <input type="text" id="new-eq-name" required placeholder="例: 天井クレーン(小) 1.5t" class="w-full p-2 border border-slate-300 rounded-lg">
-                    </div>
-                    <div>
-                        <label class="block text-slate-500 mb-1">点検項目（改行で複数指定）</label>
-                        <textarea id="new-eq-items" rows="3" required placeholder="① 走行時異音は無いか&#10;② ブレーキは問題無いか" class="w-full p-2 border border-slate-300 rounded-lg"></textarea>
-                    </div>
-                    <button type="submit" class="w-full bg-indigo-900 text-white font-bold py-2 rounded-lg hover:bg-indigo-800">
-                        このページに対象を追加
-                    </button>
-                </form>
-            </div>
-
-            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
-                <h3 class="font-bold text-sm text-slate-700">登録済み設備一覧</h3>
-                <div id="master-list-display" class="space-y-2 text-xs divide-y divide-slate-100"></div>
-            </div>
-        </div>
-
-        <!-- 3. 結果・送信 VIEW -->
+        <!-- 2. 結果・送信 VIEW -->
         <div id="view-report" class="hidden space-y-4">
             <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm text-center space-y-2">
                 <div class="text-xs text-slate-500 font-bold">点検達成率</div>
@@ -148,7 +85,7 @@
                 </h3>
                 <div>
                     <label class="block text-xs text-slate-500 mb-1">部長のメールアドレス</label>
-                    <input type="email" id="manager-email" placeholder="bucho@example.com" class="w-full p-2 text-xs border border-slate-300 rounded-lg">
+                    <input type="email" id="manager-email" placeholder="bucho@example.com" class="w-full p-2 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                 </div>
                 <button onclick="sendManagerEmail()" class="w-full bg-emerald-600 text-white font-bold py-2.5 rounded-lg text-xs shadow hover:bg-emerald-700 flex items-center justify-center gap-2">
                     <i class="fa-solid fa-paper-plane"></i> メール作成画面を開く
@@ -180,42 +117,109 @@
             <i class="fa-solid fa-floppy-disk"></i> このページを保存
         </button>
     </div>
-    <!-- 歯車（設定・リセット）モーダル -->
-    <div id="settings-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-        <div class="bg-white rounded-2xl max-w-xs w-full p-4 shadow-2xl space-y-4 relative">
-            <div class="flex justify-between items-center border-b pb-2">
+
+    <!-- 歯車（設定・編集・初期化）統合モーダル -->
+    <div id="settings-modal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3">
+        <div class="bg-white rounded-2xl max-w-sm w-full p-4 shadow-2xl space-y-4 relative max-h-[90vh] flex flex-col">
+            <div class="flex justify-between items-center border-b pb-2 shrink-0">
                 <h4 class="font-bold text-sm text-indigo-900 flex items-center gap-1.5">
-                    <i class="fa-solid fa-sliders"></i> 設定・システムリセット
+                    <i class="fa-solid fa-gear"></i> システム設定・マスター編集
                 </h4>
-                <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-slate-600 text-sm">✕</button>
+                <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-slate-600 text-sm p-1">✕</button>
             </div>
-            <div class="space-y-3 text-xs">
-                <div>
-                    <label class="block text-slate-500 font-bold mb-1">点検年度</label>
-                    <select id="setting-year" class="w-full p-2 border border-slate-300 rounded-lg font-bold bg-slate-50"></select>
+
+            <!-- モーダル内ナビゲーションタブ -->
+            <div class="flex border-b text-xs font-bold shrink-0 bg-slate-100 p-1 rounded-lg">
+                <button id="modal-tab-btn-sys" onclick="switchModalTab('sys')" class="flex-1 py-1.5 rounded-md bg-white text-indigo-950 shadow">基本設定</button>
+                <button id="modal-tab-btn-staff" onclick="switchModalTab('staff')" class="flex-1 py-1.5 rounded-md text-slate-500 hover:text-slate-800">担当設定</button>
+                <button id="modal-tab-btn-master" onclick="switchModalTab('master')" class="flex-1 py-1.5 rounded-md text-slate-500 hover:text-slate-800">対象・項目編集</button>
+            </div>
+
+            <div class="overflow-y-auto space-y-4 pr-1 flex-1 text-xs">
+                <!-- 1. 基本設定 -->
+                <div id="modal-tab-sys" class="space-y-3">
+                    <div>
+                        <label class="block text-slate-500 font-bold mb-1">点検年度</label>
+                        <select id="setting-year" class="w-full p-2 border border-slate-300 rounded-lg font-bold bg-slate-50"></select>
+                    </div>
+                    <div>
+                        <label class="block text-slate-500 font-bold mb-1">期区分</label>
+                        <select id="setting-term" onchange="onTermChangeInModal()" class="w-full p-2 border border-slate-300 rounded-lg font-bold bg-slate-50">
+                            <option value="上期" selected>上期 (4月〜9月)</option>
+                            <option value="下期">下期 (10月〜3月)</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-slate-500 font-bold mb-1">選択月</label>
+                        <select id="setting-month" class="w-full p-2 border border-slate-300 rounded-lg font-bold bg-slate-50"></select>
+                    </div>
+
+                    <div class="border-t pt-3 mt-3">
+                        <label class="block text-rose-600 font-bold text-xs mb-1">システム全初期化</label>
+                        <button onclick="resetAllData()" class="w-full py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold rounded-lg text-xs flex items-center justify-center gap-1.5 transition">
+                            <i class="fa-solid fa-rotate-left"></i> 全データを初期化（リセット）
+                        </button>
+                    </div>
                 </div>
-                <div>
-                    <label class="block text-slate-500 font-bold mb-1">期区分</label>
-                    <select id="setting-term" onchange="onTermChangeInModal()" class="w-full p-2 border border-slate-300 rounded-lg font-bold bg-slate-50">
-                        <option value="上期" selected>上期 (4月〜9月)</option>
-                        <option value="下期">下期 (10月〜3月)</option>
-                    </select>
+
+                <!-- 2. 担当設定 -->
+                <div id="modal-tab-staff" class="hidden space-y-3">
+                    <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 space-y-2">
+                        <label class="block font-bold text-slate-700">ページ選択</label>
+                        <select id="edit-page-select" onchange="loadPageStaffConfig()" class="w-full p-2 border border-slate-300 rounded-lg font-bold bg-white">
+                            <option value="1">1 ページ</option>
+                            <option value="2">2 ページ</option>
+                            <option value="3">3 ページ</option>
+                            <option value="4">4 ページ</option>
+                            <option value="5">5 ページ</option>
+                            <option value="6">6 ページ</option>
+                            <option value="7">7 ページ</option>
+                        </select>
+                        <label class="block font-bold text-slate-700 mt-2">正担当 / 副担当 (2名)</label>
+                        <input type="text" id="staff-input" placeholder="例: 山田(正) / 佐藤(副)" class="w-full p-2 border border-slate-300 rounded-lg bg-white">
+                        <button onclick="saveStaffConfig()" class="w-full bg-slate-800 text-white font-bold py-1.5 rounded-lg text-xs hover:bg-slate-700 mt-1">
+                            このページの担当者を保存
+                        </button>
+                    </div>
                 </div>
-                <div>
-                    <label class="block text-slate-500 font-bold mb-1">選択月</label>
-                    <select id="setting-month" class="w-full p-2 border border-slate-300 rounded-lg font-bold bg-slate-50"></select>
+
+                <!-- 3. 対象・項目編集 -->
+                <div id="modal-tab-master" class="hidden space-y-4">
+                    <form onsubmit="handleAddEquipment(event)" class="space-y-2 bg-slate-50 p-3 rounded-lg border border-slate-200">
+                        <h5 class="font-bold text-indigo-900 border-b pb-1">新規対象・項目の追加</h5>
+                        <div>
+                            <label class="block text-slate-500 mb-0.5 font-bold">追加先ページ</label>
+                            <select id="add-target-page" class="w-full p-1.5 border border-slate-300 rounded-lg bg-white font-bold">
+                                <option value="1">1 ページ</option>
+                                <option value="2">2 ページ</option>
+                                <option value="3">3 ページ</option>
+                                <option value="4">4 ページ</option>
+                                <option value="5">5 ページ</option>
+                                <option value="6">6 ページ</option>
+                                <option value="7">7 ページ</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-slate-500 mb-0.5 font-bold">設備・工具名</label>
+                            <input type="text" id="new-eq-name" required placeholder="例: 天井クレーン(小) 1.5t" class="w-full p-1.5 border border-slate-300 rounded-lg bg-white">
+                        </div>
+                        <div>
+                            <label class="block text-slate-500 mb-0.5 font-bold">点検項目（改行で複数）</label>
+                            <textarea id="new-eq-items" rows="2" required placeholder="① 走行時異音は無いか&#10;② ブレーキは問題無いか" class="w-full p-1.5 border border-slate-300 rounded-lg bg-white"></textarea>
+                        </div>
+                        <button type="submit" class="w-full bg-indigo-900 text-white font-bold py-1.5 rounded-lg hover:bg-indigo-800 shadow">
+                            対象を追加
+                        </button>
+                    </form>
+
+                    <div>
+                        <h5 class="font-bold text-slate-700 mb-1">登録済み設備一覧</h5>
+                        <div id="master-list-display" class="space-y-1.5 divide-y divide-slate-100 bg-slate-50 p-2 rounded-lg border border-slate-200"></div>
+                    </div>
                 </div>
             </div>
 
-            <!-- リセットセクション -->
-            <div class="border-t pt-3 mt-3">
-                <label class="block text-slate-500 font-bold text-xs mb-1">データ管理</label>
-                <button onclick="resetAllData()" class="w-full py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold rounded-lg text-xs flex items-center justify-center gap-1.5 transition">
-                    <i class="fa-solid fa-rotate-left"></i> 全データを初期化（リセット）
-                </button>
-            </div>
-
-            <div class="flex gap-2 pt-2">
+            <div class="flex gap-2 pt-2 border-t shrink-0">
                 <button onclick="closeSettingsModal()" class="flex-1 py-2 bg-slate-100 text-slate-600 font-bold rounded-lg text-xs">キャンセル</button>
                 <button onclick="applySettingsModal()" class="flex-1 py-2 bg-indigo-900 text-white font-bold rounded-lg text-xs shadow hover:bg-indigo-800">変更を適用</button>
             </div>
@@ -245,7 +249,6 @@
                 <textarea id="ng-reason-text" rows="2" placeholder="具体箇所や状況を入力してください" class="w-full text-xs p-2 border border-slate-300 rounded-lg mt-1 focus:ring-2 focus:ring-rose-500 focus:outline-none"></textarea>
             </div>
 
-            <!-- 現場写真添付領域（任意） -->
             <div>
                 <label class="text-[11px] text-slate-500 font-bold block mb-1">
                     不具合写真の添付 <span class="text-slate-400 font-normal">（任意）</span>
@@ -371,7 +374,24 @@
             alert(`${currentPage}ページの入力データを保存しました！`);
         }
 
-        // 全データのリセット処理
+        // 点検チェック結果のリセット機能（選択中の月）
+        function resetCheckResults() {
+            if (confirm(`${currentYear} ${currentMonth} の点検チェック状態（良・否・理由）をすべて解除してリセットしますか？`)) {
+                const prefix = `${currentYear}_${currentMonth}_`;
+                Object.keys(inspectionResults).forEach(key => {
+                    if (key.startsWith(prefix)) {
+                        delete inspectionResults[key];
+                    }
+                });
+                autoSaveStorage();
+                renderPageButtons();
+                renderCurrentPage();
+                updateProgress();
+                alert(`${currentMonth}のチェック結果をリセットしました。`);
+            }
+        }
+
+        // システム全初期化処理
         function resetAllData() {
             if (confirm('すべての入力データ・点検結果・追加した設備設定を削除して初期状態に戻しますか？')) {
                 localStorage.removeItem('inspection_master_v3');
@@ -502,7 +522,7 @@
             container.innerHTML = '';
 
             if (pData.equipment.length === 0) {
-                container.innerHTML = `<div class="p-8 text-center text-xs text-slate-400 bg-white rounded-xl border border-dashed">このページには点検対象が設定されていません。<br>「対象・項目編集」タブから追加できます。</div>`;
+                container.innerHTML = `<div class="p-8 text-center text-xs text-slate-400 bg-white rounded-xl border border-dashed">このページには点検対象が設定されていません。<br>右上の歯車ボタンから追加・編集できます。</div>`;
                 return;
             }
 
@@ -618,11 +638,27 @@
             document.getElementById('setting-term').value = currentTerm;
             onTermChangeInModal();
             document.getElementById('setting-month').value = currentMonth;
+            loadPageStaffConfig();
+            renderMasterList();
+            switchModalTab('sys');
             document.getElementById('settings-modal').classList.remove('hidden');
         }
 
         function closeSettingsModal() {
             document.getElementById('settings-modal').classList.add('hidden');
+        }
+
+        function switchModalTab(tab) {
+            document.getElementById('modal-tab-sys').classList.add('hidden');
+            document.getElementById('modal-tab-staff').classList.add('hidden');
+            document.getElementById('modal-tab-master').classList.add('hidden');
+
+            document.getElementById('modal-tab-btn-sys').className = 'flex-1 py-1.5 rounded-md text-slate-500 hover:text-slate-800';
+            document.getElementById('modal-tab-btn-staff').className = 'flex-1 py-1.5 rounded-md text-slate-500 hover:text-slate-800';
+            document.getElementById('modal-tab-btn-master').className = 'flex-1 py-1.5 rounded-md text-slate-500 hover:text-slate-800';
+
+            document.getElementById(`modal-tab-${tab}`).classList.remove('hidden');
+            document.getElementById(`modal-tab-btn-${tab}`).className = 'flex-1 py-1.5 rounded-md bg-white text-indigo-950 shadow font-bold';
         }
 
         function onTermChangeInModal() {
@@ -649,17 +685,13 @@
         function switchMainTab(tab) {
             autoSaveStorage();
             document.getElementById('view-check').classList.add('hidden');
-            document.getElementById('view-master').classList.add('hidden');
             document.getElementById('view-report').classList.add('hidden');
 
             document.getElementById('tab-check').className = 'flex-1 py-2 rounded-lg text-slate-600 text-center hover:bg-slate-100';
-            document.getElementById('tab-master').className = 'flex-1 py-2 rounded-lg text-slate-600 text-center hover:bg-slate-100';
             document.getElementById('tab-report').className = 'flex-1 py-2 rounded-lg text-slate-600 text-center hover:bg-slate-100';
 
             document.getElementById(`view-${tab}`).classList.remove('hidden');
             document.getElementById(`tab-${tab}`).className = 'flex-1 py-2 rounded-lg bg-indigo-900 text-white text-center shadow';
-
-            if (tab === 'master') loadPageStaffConfig();
         }
 
         function updateProgress() {
@@ -724,11 +756,11 @@
                 const eqs = masterData.pages[p].equipment;
                 eqs.forEach(eq => {
                     const div = document.createElement('div');
-                    div.className = 'pt-2 flex justify-between items-start';
+                    div.className = 'pt-1.5 flex justify-between items-start';
                     div.innerHTML = `
                         <div>
                             <span class="font-bold text-slate-800">[${p}P] ${eq.name}</span>
-                            <div class="text-[11px] text-slate-500">${eq.items.length} 項目</div>
+                            <div class="text-[10px] text-slate-500">${eq.items.length} 項目</div>
                         </div>
                         <button onclick="removeEquipment(${p}, '${eq.id}')" class="text-rose-500 hover:text-rose-700 text-xs p-1">削除</button>
                     `;
