@@ -7,7 +7,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     
-    <!-- Firebase SDK (v9/v10 Compat Library) -->
+    <!-- Firebase SDK (v10 Compat Library) -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
 
@@ -49,6 +49,15 @@
             <i class="fa-solid fa-paper-plane mr-1"></i>結果・送信
         </button>
     </nav>
+
+    <!-- Firebase未設定アラート -->
+    <div id="firebase-warning" class="bg-amber-100 border-l-4 border-amber-500 text-amber-900 p-3 m-3 text-xs font-bold rounded shadow flex justify-between items-center hidden">
+        <div>
+            <p><i class="fa-solid fa-triangle-exclamation mr-1"></i> Firebase設定が未完了です</p>
+            <p class="text-[10px] font-normal text-amber-700">クラウド同期を利用するには、右上の歯車ボタン > 「Firebase接続」を設定してください。（ローカルモードで動作中）</p>
+        </div>
+        <button onclick="openSettingsModal(); switchModalTab('firebase');" class="bg-amber-600 text-white px-2 py-1 rounded text-[10px] whitespace-nowrap ml-2">設定する</button>
+    </div>
 
     <!-- Content Area -->
     <main class="p-3 flex-1 space-y-4">
@@ -115,8 +124,8 @@
             <span class="text-slate-500">点検完了: </span>
             <span id="completed-counter" class="font-bold text-indigo-900">0 / 0</span>
             <div id="save-status-text" class="text-[10px] text-emerald-600 font-bold mt-0.5 flex items-center gap-1.5 flex-wrap">
-                <span><i class="fa-solid fa-circle-check"></i> クラウド同期済み</span>
-                <span id="online-users-badge" class="bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded-full font-bold">
+                <span id="sync-status-badge"><i class="fa-solid fa-hard-drive"></i> ローカル保存済み</span>
+                <span id="online-users-badge" class="bg-slate-100 text-slate-600 px-1.5 py-0.2 rounded-full font-bold hidden">
                     <i class="fa-solid fa-user text-[9px] mr-0.5"></i>閲覧中: 1人
                 </span>
             </div>
@@ -137,10 +146,11 @@
             </div>
 
             <!-- モーダル内ナビゲーションタブ -->
-            <div class="flex border-b text-xs font-bold shrink-0 bg-slate-100 p-1 rounded-lg">
-                <button id="modal-tab-btn-sys" onclick="switchModalTab('sys')" class="flex-1 py-1.5 rounded-md bg-white text-indigo-950 shadow">基本設定</button>
-                <button id="modal-tab-btn-staff" onclick="switchModalTab('staff')" class="flex-1 py-1.5 rounded-md text-slate-500 hover:text-slate-800">担当設定</button>
-                <button id="modal-tab-btn-master" onclick="switchModalTab('master')" class="flex-1 py-1.5 rounded-md text-slate-500 hover:text-slate-800">対象・項目編集</button>
+            <div class="flex border-b text-[11px] font-bold shrink-0 bg-slate-100 p-1 rounded-lg gap-0.5 overflow-x-auto no-scrollbar">
+                <button id="modal-tab-btn-sys" onclick="switchModalTab('sys')" class="flex-1 py-1.5 px-2 rounded-md bg-white text-indigo-950 shadow whitespace-nowrap">基本設定</button>
+                <button id="modal-tab-btn-staff" onclick="switchModalTab('staff')" class="flex-1 py-1.5 px-2 rounded-md text-slate-500 hover:text-slate-800 whitespace-nowrap">担当設定</button>
+                <button id="modal-tab-btn-master" onclick="switchModalTab('master')" class="flex-1 py-1.5 px-2 rounded-md text-slate-500 hover:text-slate-800 whitespace-nowrap">対象・項目編集</button>
+                <button id="modal-tab-btn-firebase" onclick="switchModalTab('firebase')" class="flex-1 py-1.5 px-2 rounded-md text-amber-600 hover:text-amber-800 whitespace-nowrap"><i class="fa-solid fa-cloud mr-1"></i>Firebase接続</button>
             </div>
 
             <div class="overflow-y-auto space-y-4 pr-1 flex-1 text-xs">
@@ -218,6 +228,39 @@
                         <div id="master-list-display" class="space-y-2 bg-slate-50 p-2 rounded-lg border border-slate-200"></div>
                     </div>
                 </div>
+
+                <!-- 4. Firebase 接続設定 -->
+                <div id="modal-tab-firebase" class="hidden space-y-3">
+                    <div class="bg-amber-50 p-3 rounded-lg border border-amber-200 space-y-2 text-amber-900">
+                        <p class="font-bold flex items-center gap-1"><i class="fa-solid fa-cloud text-amber-600"></i> クラウドリアルタイム同期設定</p>
+                        <p class="text-[11px] leading-relaxed">Firebaseコンソールで取得したプロジェクト設定情報をそのまま貼り付けて保存してください。</p>
+                        
+                        <div class="space-y-1.5 pt-1">
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-600">API Key</label>
+                                <input type="text" id="cfg-apiKey" placeholder="AIzaSy..." class="w-full p-1.5 text-xs border border-slate-300 rounded bg-white">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-600">Auth Domain</label>
+                                <input type="text" id="cfg-authDomain" placeholder="xxx.firebaseapp.com" class="w-full p-1.5 text-xs border border-slate-300 rounded bg-white">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-600">Database URL</label>
+                                <input type="text" id="cfg-databaseURL" placeholder="https://xxx-default-rtdb.firebaseio.com" class="w-full p-1.5 text-xs border border-slate-300 rounded bg-white">
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-bold text-slate-600">Project ID</label>
+                                <input type="text" id="cfg-projectId" placeholder="xxx" class="w-full p-1.5 text-xs border border-slate-300 rounded bg-white">
+                            </div>
+                        </div>
+
+                        <div class="pt-2 flex gap-2">
+                            <button onclick="saveFirebaseSettings()" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 rounded-lg text-xs shadow">
+                                Firebase情報を保存して接続
+                            </button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="flex gap-2 pt-2 border-t shrink-0">
@@ -272,19 +315,9 @@
     </div>
 
     <script>
-        // --- Firebase 設定 ---
-        const firebaseConfig = {
-            apiKey: "YOUR_API_KEY",
-            authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-            databaseURL: "https://YOUR_PROJECT_ID-default-rtdb.firebaseio.com",
-            projectId: "YOUR_PROJECT_ID",
-            storageBucket: "YOUR_PROJECT_ID.appspot.com",
-            messagingSenderId: "YOUR_SENDER_ID",
-            appId: "YOUR_APP_ID"
-        };
-
-        firebase.initializeApp(firebaseConfig);
-        const database = firebase.database();
+        let firebaseApp = null;
+        let database = null;
+        let isFirebaseInitialized = false;
 
         let currentYear = '2026年度';
         let currentTerm = '上期';
@@ -313,209 +346,13 @@
                         { id: 'i_1_2_3', text: '③ ワイヤーに緩み・ねじれは無いか' },
                         { id: 'i_1_2_4', text: '④ 吊りフックに破損は無いか' },
                         { id: 'i_1_2_5', text: '⑤ スイッチペンダントに破損は無いか' }
-                    ]},
-                    { id: 'eq_1_3', name: '天井クレーン（大）2.8t / 吊り紐・帯、吊具', items: [
-                        { id: 'i_1_3_1', text: '① 紐・帯は必要数あるか' },
-                        { id: 'i_1_3_2', text: '② 紐・帯に破損は無いか' },
-                        { id: 'i_1_3_3', text: '③ 吊具（チャンチャラ）に異常、破損は無いか' },
-                        { id: 'i_1_3_4', text: '④ 使用期限（スリングベルト）' }
-                    ]},
-                    { id: 'eq_1_4', name: '天井クレーン（大）2.8t / 吊り測り', items: [
-                        { id: 'i_1_4_1', text: '① 上下吊りフックに破損は無いか' },
-                        { id: 'i_1_4_2', text: '② 測定正常か' },
-                        { id: 'i_1_4_3', text: '③ 付属品（充電器等）はあるか' }
-                    ]},
-                    { id: 'eq_1_5', name: '天井クレーン（小）1.5t / 本体', items: [
-                        { id: 'i_1_5_1', text: '① 走行時異音は無いか' },
-                        { id: 'i_1_5_2', text: '② ブレーキは問題無いか' },
-                        { id: 'i_1_5_3', text: '③ ワイヤーに緩み・ねじれは無いか' },
-                        { id: 'i_1_5_4', text: '④ 吊りフックに破損は無いか' },
-                        { id: 'i_1_5_5', text: '⑤ スイッチペンダントに破損は無いか' }
-                    ]},
-                    { id: 'eq_1_6', name: '天井クレーン（小）1.5t / 吊り紐・帯、吊具', items: [
-                        { id: 'i_1_6_1', text: '① 紐・帯は必要数あるか' },
-                        { id: 'i_1_6_2', text: '② 紐・帯に破損は無いか' },
-                        { id: 'i_1_6_3', text: '③ 吊具（チャンチャラ）に異常、破損は無いか' },
-                        { id: 'i_1_6_4', text: '④ 使用期限（スリングベルト）' }
-                    ]},
-                    { id: 'eq_1_7', name: '天井クレーン（小）1.5t / 吊り測り', items: [
-                        { id: 'i_1_7_1', text: '① 上下吊りフックに破損は無いか' },
-                        { id: 'i_1_7_2', text: '② 測定正常か' },
-                        { id: 'i_1_7_3', text: '③ 付属品（充電器等）はあるか' }
-                    ]},
-                    { id: 'eq_1_8', name: 'VACドッキング治具', items: [
-                        { id: 'i_1_8_1', text: '① 移動キャスターに問題は無いか' },
-                        { id: 'i_1_8_2', text: '② 上下動作に問題は無いか' },
-                        { id: 'i_1_8_3', text: '③ キャスター固定に問題は無いか' },
-                        { id: 'i_1_8_4', text: '④ 固定具の取り付けに問題は無いか' }
-                    ]},
-                    { id: 'eq_1_9', name: '廃棄物重量測定測り', items: [
-                        { id: 'i_1_9_1', text: '① パネル、スイッチに破損は無いか' },
-                        { id: 'i_1_9_2', text: '② 測定テーブルに破損は無いか' },
-                        { id: 'i_1_9_3', text: '③ 測定は正常か' }
                     ]}
                 ]},
-                2: { staff: '未定', equipment: [
-                    { id: 'eq_2_1', name: '分電盤（検査用）7か所', items: [
-                        { id: 'i_2_1_1', text: '① 扉に異常は無いか' },
-                        { id: 'i_2_1_2', text: '② ブレーキに問題は無いか' },
-                        { id: 'i_2_1_3', text: '③ 端子台に問題は無いか' }
-                    ]},
-                    { id: 'eq_2_2', name: 'エアー分配機器', items: [
-                        { id: 'i_2_2_1', text: '① エアー漏れが無いか' },
-                        { id: 'i_2_2_2', text: '② ホース巻き取りは問題無いか' }
-                    ]},
-                    { id: 'eq_2_3', name: '消火器①〜⑥', items: [
-                        { id: 'i_2_3_1', text: '① 消火器の使用期限は問題無いか' },
-                        { id: 'i_2_3_2', text: '② 腐食は無いか' },
-                        { id: 'i_2_3_3', text: '③ 安全ピンは問題無いか（抜けていないか）' },
-                        { id: 'i_2_3_4', text: '④ 物品放置禁止エリアは守られているか' }
-                    ]},
-                    { id: 'eq_2_4', name: '防火シャッター', items: [
-                        { id: 'i_2_4_1', text: '① 動作確認に問題はないか' }
-                    ]},
-                    { id: 'eq_2_5', name: '消火栓', items: [
-                        { id: 'i_2_5_1', text: '① 消火栓の前に物が置いて無いか' }
-                    ]},
-                    { id: 'eq_2_6', name: '照明', items: [
-                        { id: 'i_2_6_1', text: '① ON/OFFは正常か' },
-                        { id: 'i_2_6_2', text: '② 切れているものは無いか' },
-                        { id: 'i_2_6_3', text: '③ 表示物の剥がれが無いか' },
-                        { id: 'i_2_6_4', text: '④ 汚れ、破損は無いか' },
-                        { id: 'i_2_6_5', text: '⑤ 古い情報が残っていないか' }
-                    ]},
-                    { id: 'eq_2_7', name: 'ラインテープ', items: [
-                        { id: 'i_2_7_1', text: '① 剥がれが無いか' },
-                        { id: 'i_2_7_2', text: '② 汚れ、破損は無いか' }
-                    ]},
-                    { id: 'eq_2_8', name: 'フロア', items: [
-                        { id: 'i_2_8_1', text: '① 破損がないか' }
-                    ]},
-                    { id: 'eq_2_9', name: 'エアコン①〜⑩', items: [
-                        { id: 'i_2_9_1', text: '① フィルター清掃後リセット' },
-                        { id: 'i_2_9_2', text: '② 動作確認' }
-                    ]}
-                ]},
-                3: { staff: '未定', equipment: [
-                    { id: 'eq_3_1', name: '電動リフト（冷凍機組立）', items: [
-                        { id: 'i_3_1_1', text: '① 移動取手に緩み・ガタは無いか' },
-                        { id: 'i_3_1_2', text: '② フォーク部に問題は無いか' },
-                        { id: 'i_3_1_3', text: '③ 移動キャスターに問題は無いか' },
-                        { id: 'i_3_1_4', text: '④ キャスター固定は問題無いか' },
-                        { id: 'i_3_1_5', text: '⑤ 上下動作に問題は無いか' },
-                        { id: 'i_3_1_6', text: '⑥ バッテリーに問題は無いか' },
-                        { id: 'i_3_1_7', text: '⑦ 充電動作に問題は無いか' }
-                    ]},
-                    { id: 'eq_3_2', name: '冷媒充填装置', items: [
-                        { id: 'i_3_2_1', text: '① 充電機能に問題は無いか' },
-                        { id: 'i_3_2_2', text: '② C.T、パイプに問題は無いか' },
-                        { id: 'i_3_2_3', text: '③ 充電量に問題は無いか' },
-                        { id: 'i_3_2_4', text: '④ 機器校正は行われているか' }
-                    ]},
-                    { id: 'eq_3_3', name: '乾燥設定機器', items: [
-                        { id: 'i_3_3_1', text: '① 設定温度、時間は問題無いか' },
-                        { id: 'i_3_3_2', text: '② 機器に破損は無いか' },
-                        { id: 'i_3_3_3', text: '③ 加熱部に異物混入等は無いか清掃はされているか' },
-                        { id: 'i_3_3_4', text: '④ 熱風ダクトに破損は無いか' }
-                    ]},
-                    { id: 'eq_3_4', name: '乾燥ブース', items: [
-                        { id: 'i_3_4_1', text: '① 扉動作は正常か' },
-                        { id: 'i_3_4_2', text: '② 断熱材に損傷は無いか' },
-                        { id: 'i_3_4_3', text: '③ 架台にガタ・緩みは無いか' }
-                    ]},
-                    { id: 'eq_3_5', name: '真空ポンプ①・②', items: [
-                        { id: 'i_3_5_1', text: '① 動作に問題は無いか' },
-                        { id: 'i_3_5_2', text: '② 各バルブに問題は無いか' },
-                        { id: 'i_3_5_3', text: '③ オイル量は正常か' }
-                    ]}
-                ]},
-                4: { staff: '未定', equipment: [
-                    { id: 'eq_4_1', name: '電動リフト（本体組立1）', items: [
-                        { id: 'i_4_1_1', text: '① 移動取手に緩み・ガタは無いか' },
-                        { id: 'i_4_1_2', text: '② フォーク部に問題は無いか' },
-                        { id: 'i_4_1_3', text: '③ 移動キャスターに問題は無いか' },
-                        { id: 'i_4_1_4', text: '④ キャスター固定は問題無いか' },
-                        { id: 'i_4_1_5', text: '⑤ 上下動作に問題は無いか' },
-                        { id: 'i_4_1_6', text: '⑥ バッテリー、充電に問題は無いか' }
-                    ]},
-                    { id: 'eq_4_2', name: '電動リフト（本体組立2）', items: [
-                        { id: 'i_4_2_1', text: '① 移動取手に緩み・ガタは無いか' },
-                        { id: 'i_4_2_2', text: '② フォーク部に問題は無いか' },
-                        { id: 'i_4_2_3', text: '③ 移動キャスターに問題は無いか' },
-                        { id: 'i_4_2_4', text: '④ キャスター固定は問題無いか' },
-                        { id: 'i_4_2_5', text: '⑤ 上下動作に問題は無いか' },
-                        { id: 'i_4_2_6', text: '⑥ バッテリー、充電に問題は無いか' }
-                    ]},
-                    { id: 'eq_4_3', name: '函体ドッキング治具', items: [
-                        { id: 'i_4_3_1', text: '① 治具床固定に問題は無いか' },
-                        { id: 'i_4_3_2', text: '② 上下ゴンドラのローラーは問題無いか' },
-                        { id: 'i_4_3_3', text: '③ リフトは問題無いか' },
-                        { id: 'i_4_3_4', text: '④ リフトワイヤーに問題は無いか' },
-                        { id: 'i_4_3_5', text: '⑤ リフトフック部に問題は無いか' },
-                        { id: 'i_4_3_6', text: '⑥ リフト吊り部分（本体側）に問題は無いか（ガタ・ゆるみ）' },
-                        { id: 'i_4_3_7', text: '⑦ 操作スイッチに問題は無いか' },
-                        { id: 'i_4_3_8', text: '⑧ 機種切り替え治具に問題は無いか' },
-                        { id: 'i_4_3_9', text: '⑨ キズ防止マットが剥がれていないか' }
-                    ]},
-                    { id: 'eq_4_4', name: '扉ドッキング治具', items: [
-                        { id: 'i_4_4_1', text: '① 移動キャスターに問題は無いか' },
-                        { id: 'i_4_4_2', text: '② 上下動作に問題は無いか' },
-                        { id: 'i_4_4_3', text: '③ キャスター固定に問題は無いか' },
-                        { id: 'i_4_4_4', text: '④ 扉固定バンドに問題は無いか' }
-                    ]}
-                ]},
-                5: { staff: '未定', equipment: [
-                    { id: 'eq_5_1', name: '純水発生装置1・2', items: [
-                        { id: 'i_5_1_1', text: '① 動作に問題は無いか' },
-                        { id: 'i_5_1_2', text: '② フィルターに目詰まりは無いか' },
-                        { id: 'i_5_1_3', text: '③ 生成量は問題無いか' }
-                    ]},
-                    { id: 'eq_5_2', name: 'データロガー①〜④', items: [
-                        { id: 'i_5_2_1', text: '① 計測器に異常は無いか' },
-                        { id: 'i_5_2_2', text: '② 機器校正は行われているか' }
-                    ]},
-                    { id: 'eq_5_3', name: '熱電対①・②', items: [
-                        { id: 'i_5_3_1', text: '① 断線または破損が無いか' },
-                        { id: 'i_5_3_2', text: '② 校正は行われているか（検査済み品であるか）' },
-                        { id: 'i_5_3_3', text: '③ 吊りフレームに問題はないか（ガタ・ゆるみ）' }
-                    ]},
-                    { id: 'eq_5_4', name: 'タスコ ウェイトリミッター&自動チャージャー①〜③', items: [
-                        { id: 'i_5_4_1', text: '① 動作に問題無いか' },
-                        { id: 'i_5_4_2', text: '② 機器に破損は無いか' },
-                        { id: 'i_5_4_3', text: '③ 機器校正は行われているか' }
-                    ]},
-                    { id: 'eq_5_5', name: 'トルクチェッカー', items: [
-                        { id: 'i_5_5_1', text: '① 動作に問題無いか' },
-                        { id: 'i_5_5_2', text: '② 機器に破損は無いか' },
-                        { id: 'i_5_5_3', text: '③ 機器校正は行われているか' }
-                    ]}
-                ]},
-                6: { staff: '未定', equipment: [
-                    { id: 'eq_6_1', name: '3Dスペック組立エリア 電動ドライバー（LS-01, LS-02）', items: [
-                        { id: 'i_6_1_1', text: '① 動作に問題は無いか' },
-                        { id: 'i_6_1_2', text: '② トルク値は適正か' }
-                    ]},
-                    { id: 'eq_6_2', name: '冷凍機エリア 電動ドライバー（RT-01, RT-02）', items: [
-                        { id: 'i_6_2_1', text: '① 動作に問題は無いか' },
-                        { id: 'i_6_2_2', text: '② トルク値は適正か' }
-                    ]},
-                    { id: 'eq_6_3', name: '小物組立エリア 電動ドライバー（KM-01, KM-02）', items: [
-                        { id: 'i_6_3_1', text: '① 動作に問題は無いか' },
-                        { id: 'i_6_3_2', text: '② トルク値は適正か' }
-                    ]},
-                    { id: 'eq_6_4', name: '銅加工エリア 電動ドライバー（MK-01, MK-02）', items: [
-                        { id: 'i_6_4_1', text: '① 動作に問題は無いか' },
-                        { id: 'i_6_4_2', text: '② トルク値は適正か' }
-                    ]},
-                    { id: 'eq_6_5', name: 'VAC組立エリア 電動ドライバー（VA-01, VA-02）', items: [
-                        { id: 'i_6_5_1', text: '① 動作に問題は無いか' },
-                        { id: 'i_6_6_2', text: '② トルク値は適正か' }
-                    ]},
-                    { id: 'eq_6_6', name: 'ASE組立エリア 電動ドライバー（AS-01, AS-02）', items: [
-                        { id: 'i_6_6_1', text: '① 動作に問題は無いか' },
-                        { id: 'i_6_6_2', text: '② トルク値は適正か' }
-                    ]}
-                ]},
+                2: { staff: '未定', equipment: [] },
+                3: { staff: '未定', equipment: [] },
+                4: { staff: '未定', equipment: [] },
+                5: { staff: '未定', equipment: [] },
+                6: { staff: '未定', equipment: [] },
                 7: { staff: '未定', equipment: [] }
             }
         };
@@ -525,8 +362,8 @@
 
         document.addEventListener('DOMContentLoaded', () => {
             generateYearOptions();
-            setupFirebaseListeners();
-            setupPresence(); // 人数カウント設定
+            loadLocalStorageData();
+            initFirebaseFromStorage();
             updateHeaderDisplay();
             renderMonthButtons();
             renderPageButtons();
@@ -535,25 +372,95 @@
             updateProgress();
         });
 
-        // --- リアルタイム人数カウント (Presence) 機能 ---
+        // --- ローカルストレージからの復元 ---
+        function loadLocalStorageData() {
+            const localMaster = localStorage.getItem('inspection_masterData');
+            if (localMaster) masterData = JSON.parse(localMaster);
+
+            const localResults = localStorage.getItem('inspection_results');
+            if (localResults) inspectionResults = JSON.parse(localResults);
+
+            const localConfig = localStorage.getItem('inspection_config');
+            if (localConfig) {
+                const conf = JSON.parse(localConfig);
+                currentYear = conf.year || '2026年度';
+                currentTerm = conf.term || '上期';
+                currentMonth = conf.month || '4月';
+            }
+        }
+
+        // --- Firebase 初期化 ---
+        function initFirebaseFromStorage() {
+            const cfg = localStorage.getItem('firebase_config');
+            if (!cfg) {
+                document.getElementById('firebase-warning').classList.remove('hidden');
+                return;
+            }
+
+            try {
+                const configObj = JSON.parse(cfg);
+                if (!configObj.apiKey || !configObj.databaseURL) {
+                    document.getElementById('firebase-warning').classList.remove('hidden');
+                    return;
+                }
+
+                if (!firebase.apps.length) {
+                    firebaseApp = firebase.initializeApp(configObj);
+                } else {
+                    firebaseApp = firebase.app();
+                }
+
+                database = firebase.database();
+                isFirebaseInitialized = true;
+
+                document.getElementById('firebase-warning').classList.add('hidden');
+                document.getElementById('sync-status-badge').innerHTML = '<i class="fa-solid fa-cloud text-emerald-500"></i> クラウド同期済み';
+                
+                setupFirebaseListeners();
+                setupPresence();
+            } catch (e) {
+                console.error("Firebase Initialization Error:", e);
+                document.getElementById('firebase-warning').classList.remove('hidden');
+            }
+        }
+
+        function saveFirebaseSettings() {
+            const configObj = {
+                apiKey: document.getElementById('cfg-apiKey').value.trim(),
+                authDomain: document.getElementById('cfg-authDomain').value.trim(),
+                databaseURL: document.getElementById('cfg-databaseURL').value.trim(),
+                projectId: document.getElementById('cfg-projectId').value.trim()
+            };
+
+            if (!configObj.apiKey || !configObj.databaseURL) {
+                alert('API Key と Database URL は必須項目です。');
+                return;
+            }
+
+            localStorage.setItem('firebase_config', JSON.stringify(configObj));
+            alert('Firebase設定を保存しました。ページを再読み込みします。');
+            window.location.reload();
+        }
+
+        // --- リアルタイム人数カウント (Presence) ---
         function setupPresence() {
+            if (!isFirebaseInitialized || !database) return;
+
             const mySessionRef = database.ref('sessions').push();
             const connectedRef = database.ref('.info/connected');
 
             connectedRef.on('value', (snap) => {
                 if (snap.val() === true) {
-                    // 切断されたらDBからセッションを消す
                     mySessionRef.onDisconnect().remove();
-                    // 接続中セッションとして書き込み
                     mySessionRef.set(true);
                 }
             });
 
-            // セッション数をリアルタイムで監視
             database.ref('sessions').on('value', (snap) => {
                 const count = snap.numChildren() || 0;
                 const badge = document.getElementById('online-users-badge');
                 if (badge) {
+                    badge.classList.remove('hidden');
                     badge.innerHTML = `<i class="fa-solid fa-user text-[9px] mr-0.5"></i>閲覧中: ${count}人`;
                 }
             });
@@ -561,39 +468,30 @@
 
         // --- Firebase リアルタイム同期設定 ---
         function setupFirebaseListeners() {
-            // 1. マスターデータの同期
+            if (!isFirebaseInitialized || !database) return;
+
             database.ref('masterData').on('value', (snapshot) => {
                 const data = snapshot.val();
                 if (data && data.pages) {
-                    for (let p in data.pages) {
-                        if (!data.pages[p].equipment) {
-                            data.pages[p].equipment = [];
-                        } else {
-                            data.pages[p].equipment.forEach(eq => {
-                                if (!eq.items) eq.items = [];
-                            });
-                        }
-                    }
                     masterData = data;
-                } else {
-                    database.ref('masterData').set(defaultMasterData);
+                    localStorage.setItem('inspection_masterData', JSON.stringify(masterData));
+                    refreshUI();
                 }
-                refreshUI();
             });
 
-            // 2. 点検結果データの同期
             database.ref('inspectionResults').on('value', (snapshot) => {
                 inspectionResults = snapshot.val() || {};
+                localStorage.setItem('inspection_results', JSON.stringify(inspectionResults));
                 refreshUI();
             });
 
-            // 3. システム設定（年度・期・月）の同期
             database.ref('config').on('value', (snapshot) => {
                 const conf = snapshot.val();
                 if (conf) {
                     currentYear = conf.year || '2026年度';
                     currentTerm = conf.term || '上期';
                     currentMonth = conf.month || '4月';
+                    localStorage.setItem('inspection_config', JSON.stringify(conf));
                     updateHeaderDisplay();
                     renderMonthButtons();
                     refreshUI();
@@ -623,13 +521,24 @@
         }
 
         function autoSaveStorage() {
-            database.ref('masterData').set(masterData);
-            database.ref('inspectionResults').set(inspectionResults);
-            database.ref('config').set({
+            localStorage.setItem('inspection_masterData', JSON.stringify(masterData));
+            localStorage.setItem('inspection_results', JSON.stringify(inspectionResults));
+            localStorage.setItem('inspection_config', JSON.stringify({
                 year: currentYear,
                 term: currentTerm,
                 month: currentMonth
-            });
+            }));
+
+            if (isFirebaseInitialized && database) {
+                database.ref('masterData').set(masterData);
+                database.ref('inspectionResults').set(inspectionResults);
+                database.ref('config').set({
+                    year: currentYear,
+                    term: currentTerm,
+                    month: currentMonth
+                });
+            }
+            refreshUI();
         }
 
         function manualSaveData() {
@@ -638,7 +547,7 @@
         }
 
         function resetCheckResults() {
-            if (confirm(`${currentYear} ${currentMonth} の点検チェック状態（良・否・理由）をすべて解除してリセットしますか？`)) {
+            if (confirm(`${currentYear} ${currentMonth} の点検チェック状態をリセットしますか？`)) {
                 const prefix = `${currentYear}_${currentMonth}_`;
                 Object.keys(inspectionResults).forEach(key => {
                     if (key.startsWith(prefix)) {
@@ -875,6 +784,16 @@
             document.getElementById('setting-month').value = currentMonth;
             loadPageStaffConfig();
             renderMasterList();
+
+            const cfg = localStorage.getItem('firebase_config');
+            if (cfg) {
+                const c = JSON.parse(cfg);
+                document.getElementById('cfg-apiKey').value = c.apiKey || '';
+                document.getElementById('cfg-authDomain').value = c.authDomain || '';
+                document.getElementById('cfg-databaseURL').value = c.databaseURL || '';
+                document.getElementById('cfg-projectId').value = c.projectId || '';
+            }
+
             switchModalTab('sys');
             document.getElementById('settings-modal').classList.remove('hidden');
         }
@@ -887,13 +806,15 @@
             document.getElementById('modal-tab-sys').classList.add('hidden');
             document.getElementById('modal-tab-staff').classList.add('hidden');
             document.getElementById('modal-tab-master').classList.add('hidden');
+            document.getElementById('modal-tab-firebase').classList.add('hidden');
 
-            document.getElementById('modal-tab-btn-sys').className = 'flex-1 py-1.5 rounded-md text-slate-500 hover:text-slate-800';
-            document.getElementById('modal-tab-btn-staff').className = 'flex-1 py-1.5 rounded-md text-slate-500 hover:text-slate-800';
-            document.getElementById('modal-tab-btn-master').className = 'flex-1 py-1.5 rounded-md text-slate-500 hover:text-slate-800';
+            document.getElementById('modal-tab-btn-sys').className = 'flex-1 py-1.5 px-2 rounded-md text-slate-500 hover:text-slate-800 whitespace-nowrap';
+            document.getElementById('modal-tab-btn-staff').className = 'flex-1 py-1.5 px-2 rounded-md text-slate-500 hover:text-slate-800 whitespace-nowrap';
+            document.getElementById('modal-tab-btn-master').className = 'flex-1 py-1.5 px-2 rounded-md text-slate-500 hover:text-slate-800 whitespace-nowrap';
+            document.getElementById('modal-tab-btn-firebase').className = 'flex-1 py-1.5 px-2 rounded-md text-amber-600 hover:text-amber-800 whitespace-nowrap';
 
             document.getElementById(`modal-tab-${tab}`).classList.remove('hidden');
-            document.getElementById(`modal-tab-btn-${tab}`).className = 'flex-1 py-1.5 rounded-md bg-white text-indigo-950 shadow font-bold';
+            document.getElementById(`modal-tab-btn-${tab}`).className = 'flex-1 py-1.5 px-2 rounded-md bg-white text-indigo-950 shadow font-bold whitespace-nowrap';
         }
 
         function onTermChangeInModal() {
@@ -1141,4 +1062,3 @@
     </script>
 </body>
 </html>
- 
