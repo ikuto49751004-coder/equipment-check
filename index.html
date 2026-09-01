@@ -509,7 +509,7 @@
                     ]},
                     { id: 'eq_6_5', name: 'VAC組立エリア 電動ドライバー（VA-01, VA-02）', items: [
                         { id: 'i_6_5_1', text: '① 動作に問題は無いか' },
-                        { id: 'i_6_5_2', text: '② トルク値は適正か' } /* 修正: i_6_6_2 -> i_6_5_2 */
+                        { id: 'i_6_6_2', text: '② トルク値は適正か' }
                     ]},
                     { id: 'eq_6_6', name: 'ASE組立エリア 電動ドライバー（AS-01, AS-02）', items: [
                         { id: 'i_6_6_1', text: '① 動作に問題は無いか' },
@@ -740,7 +740,7 @@
 
         function selectMonth(m) {
             currentMonth = m;
-            database.ref('config/month').set(m);
+            autoSaveStorage();
             renderMonthButtons();
             refreshUI();
         }
@@ -808,9 +808,8 @@
         }
 
         function setResult(key, status) {
-            const data = { status: status, reason: '', photo: '' };
-            inspectionResults[key] = data;
-            database.ref(`inspectionResults/${key}`).set(data);
+            inspectionResults[key] = { status: status, reason: '', photo: '' };
+            autoSaveStorage();
         }
 
         function openNgModal(key) {
@@ -864,9 +863,8 @@
         function confirmNgReason() {
             if (!activeNgKey) return;
             const reason = document.getElementById('ng-reason-text').value.trim();
-            const data = { status: 'NG', reason: reason, photo: tempPhotoData };
-            inspectionResults[activeNgKey] = data;
-            database.ref(`inspectionResults/${activeNgKey}`).set(data);
+            inspectionResults[activeNgKey] = { status: 'NG', reason: reason, photo: tempPhotoData };
+            autoSaveStorage();
             closeNgModal();
         }
 
@@ -951,7 +949,6 @@
             if (!masterData.pages[p]) masterData.pages[p] = { staff: '', equipment: [] };
             masterData.pages[p].staff = document.getElementById('staff-input').value.trim();
             autoSaveStorage();
-            refreshUI(); /* 修正: 保存後にUIを更新 */
             alert(`${p}ページの担当者を保存しました！`);
         }
 
@@ -1144,3 +1141,4 @@
     </script>
 </body>
 </html>
+ 
