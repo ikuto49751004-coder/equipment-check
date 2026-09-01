@@ -114,9 +114,12 @@
         <div class="text-xs">
             <span class="text-slate-500">点検完了: </span>
             <span id="completed-counter" class="font-bold text-indigo-900">0 / 0</span>
-            <span id="save-status-text" class="block text-[10px] text-emerald-600 font-bold mt-0.5">
-                <i class="fa-solid fa-circle-check"></i> クラウド同期中...
-            </span>
+            <div id="save-status-text" class="text-[10px] text-emerald-600 font-bold mt-0.5 flex items-center gap-1.5 flex-wrap">
+                <span><i class="fa-solid fa-circle-check"></i> クラウド同期済み</span>
+                <span id="online-users-badge" class="bg-emerald-100 text-emerald-800 px-1.5 py-0.2 rounded-full font-bold">
+                    <i class="fa-solid fa-user text-[9px] mr-0.5"></i>閲覧中: 1人
+                </span>
+            </div>
         </div>
         <button onclick="manualSaveData()" class="bg-indigo-900 hover:bg-indigo-800 text-white text-xs font-bold px-5 py-2.5 rounded-lg shadow flex items-center gap-1.5">
             <i class="fa-solid fa-floppy-disk"></i> このページを保存
@@ -523,6 +526,7 @@
         document.addEventListener('DOMContentLoaded', () => {
             generateYearOptions();
             setupFirebaseListeners();
+            setupPresence(); // 人数カウント設定
             updateHeaderDisplay();
             renderMonthButtons();
             renderPageButtons();
@@ -531,13 +535,36 @@
             updateProgress();
         });
 
+        // --- リアルタイム人数カウント (Presence) 機能 ---
+        function setupPresence() {
+            const mySessionRef = database.ref('sessions').push();
+            const connectedRef = database.ref('.info/connected');
+
+            connectedRef.on('value', (snap) => {
+                if (snap.val() === true) {
+                    // 切断されたらDBからセッションを消す
+                    mySessionRef.onDisconnect().remove();
+                    // 接続中セッションとして書き込み
+                    mySessionRef.set(true);
+                }
+            });
+
+            // セッション数をリアルタイムで監視
+            database.ref('sessions').on('value', (snap) => {
+                const count = snap.numChildren() || 0;
+                const badge = document.getElementById('online-users-badge');
+                if (badge) {
+                    badge.innerHTML = `<i class="fa-solid fa-user text-[9px] mr-0.5"></i>閲覧中: ${count}人`;
+                }
+            });
+        }
+
         // --- Firebase リアルタイム同期設定 ---
         function setupFirebaseListeners() {
             // 1. マスターデータの同期
             database.ref('masterData').on('value', (snapshot) => {
                 const data = snapshot.val();
                 if (data && data.pages) {
-                    // Firebaseの配列変換対策（空の配列補正）
                     for (let p in data.pages) {
                         if (!data.pages[p].equipment) {
                             data.pages[p].equipment = [];
@@ -549,7 +576,6 @@
                     }
                     masterData = data;
                 } else {
-                    // 初期データ登録
                     database.ref('masterData').set(defaultMasterData);
                 }
                 refreshUI();
@@ -597,7 +623,6 @@
         }
 
         function autoSaveStorage() {
-            // Firebaseへ保存（即時同期）
             database.ref('masterData').set(masterData);
             database.ref('inspectionResults').set(inspectionResults);
             database.ref('config').set({
@@ -605,11 +630,6 @@
                 term: currentTerm,
                 month: currentMonth
             });
-
-            const statusTxt = document.getElementById('save-status-text');
-            if (statusTxt) {
-                statusTxt.innerHTML = `<i class="fa-solid fa-circle-check"></i> クラウド同期済み (${new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})})`;
-            }
         }
 
         function manualSaveData() {
